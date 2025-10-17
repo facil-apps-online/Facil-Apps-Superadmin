@@ -1,0 +1,191 @@
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import { Session, User } from '@supabase/supabase-js';
+import { useNavigate } from 'react-router-dom';
+
+// --- INTERFACES ---
+interface UserProfile {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  avatarUrl?: string;
+  country_id?: string;
+  language_id?: string;
+  currency_id?: string;
+  timezone?: string;
+}
+
+export interface UserAssignment {
+  assignment_id: string;
+  tenant_id: string;
+  tenant_name: string;
+  role_id: string;
+  role: string;
+  branch_id: string | null;
+  branch_name: string | null;
+  status: 'active' | 'inactive';
+}
+
+interface AuthContextType {
+  session: Session | null;
+  user: User | null;
+  profile: UserProfile | null;
+  assignments: UserAssignment[];
+  currentAssignment: UserAssignment | null;
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => Promise<string | null>;
+  logout: () => Promise<void>;
+  switchAssignment: (assignmentId: string) => Promise<void>;
+  refreshUser: () => Promise<void>;
+  loading: boolean;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient: any }> = ({ children, supabaseClient }) => {
+  console.log('[AuthProvider] Rendering. supabaseClient is:', supabaseClient);
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [assignments, setAssignments] = useState<UserAssignment[]>([]);
+  const [currentAssignment, setCurrentAssignment] = useState<UserAssignment | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const processSession = useCallback((sessionData: Session | null) => {
+    console.log('[processSession] Called with sessionData:', sessionData);
+    setSession(sessionData);
+    setUser(sessionData?.user ?? null);
+
+    if (sessionData?.user) {
+      console.log('[processSession] User found in session. Processing metadata.');
+      const { app_metadata, user_metadata, id, email } = sessionData.user;
+      const userProfile: UserProfile = {
+        id: id,
+        email: email || '',
+        firstName: user_metadata.first_name,
+        lastName: user_metadata.last_name,
+        avatarUrl: user_metadata.avatar_url,
+        country_id: user_metadata.country_id,
+        language_id: user_metadata.language_id,
+        currency_id: user_metadata.currency_id,
+        timezone: user_metadata.timezone,
+      };
+      console.log('[processSession] Setting profile:', userProfile);
+      setProfile(userProfile);
+
+      if (app_metadata.assignments && Array.isArray(app_metadata.assignments) && app_metadata.assignments.length > 0) {
+        console.log('[processSession] Assignments found:', app_metadata.assignments);
+        const allAssignments: UserAssignment[] = app_metadata.assignments.map((a: any) => ({
+          assignment_id: a.assignment_id,
+          tenant_id: a.tenant_id,
+          tenant_name: a.tenant_name,
+          role_id: a.role_id,
+          role: a.role,
+          branch_id: a.branch_id || null,
+          branch_name: a.branch_name || null,
+          status: a.status || 'inactive',
+        }));
+        setAssignments(allAssignments);
+        setCurrentAssignment(allAssignments[0]);
+      } else {
+        console.log('[processSession] No assignments found. Clearing assignments.');
+        setAssignments([]);
+        setCurrentAssignment(null);
+      }
+    } else {
+      console.log('[processSession] No user in session. Clearing all user data.');
+      setProfile(null);
+      setAssignments([]);
+      setCurrentAssignment(null);
+    }
+    console.log('[processSession] Finished. Setting loading to false.');
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    console.log('[useEffect onAuthStateChange] Setting up listener...');
+    setLoading(true);
+    if (!supabaseClient?.auth) {
+      console.error('[useEffect onAuthStateChange] CRITICAL: supabaseClient or supabaseClient.auth is not available!');
+      setLoading(false);
+      return;
+    }
+    const { data: { subscription } } = supabaseClient.auth.onAuthStateChange((_event, session) => processSession(session));
+    return () => subscription.unsubscribe();
+  }, [supabaseClient, processSession]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    console.log('[login] Attempting login for email:', email);
+    const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (signInError) throw signInError;
+
+    // La sesión ahora está establecida, getUser() la recuperará de forma segura.
+    const { data: { user }, error: getUserError } = await supabaseClient.auth.getUser();
+    if (getUserError) throw getUserError;
+
+    const role = user?.app_metadata?.assignments?.[0]?.role || null;
+    console.log('[login] Login successful. Role found:', role);
+    return role;
+  }, [supabaseClient]);
+
+  const logout = useCallback(async () => {
+    console.log('[logout] Signing out.');
+    await supabaseClient.auth.signOut();
+    navigate('/auth');
+  }, [supabaseClient, navigate]);
+  
+  const refreshUser = useCallback(async () => {
+    console.log('[refreshUser] Refreshing session.');
+    await supabaseClient.auth.refreshSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    processSession(session);
+  }, [supabaseClient, processSession]);
+
+  const switchAssignment = useCallback(async (assignmentId: string) => {
+    console.log('[switchAssignment] Attempting to switch to assignment ID:', assignmentId);
+    if (!user) throw new Error("Usuario no autenticado para cambiar de asignación.");
+    
+    const { data, error } = await supabaseClient.functions.invoke('user-actions', {
+      body: {
+        action: 'switch-assignment',
+        payload: { userId: user.id, newAssignmentId: assignmentId },
+      },
+    });
+
+    if (error) throw error;
+    if (!data.success) throw new Error(data.message || "Error al cambiar de asignación.");
+
+    console.log('[switchAssignment] Switch successful. Refreshing user.');
+    // Forzar el refresco para que el AuthContext se reconstruya con el nuevo orden
+    await refreshUser();
+  }, [user, supabaseClient, refreshUser]);
+
+  const contextValue = useMemo(() => ({
+    session,
+    user,
+    profile,
+    assignments,
+    currentAssignment,
+    isAuthenticated: !!currentAssignment && currentAssignment.status === 'active',
+    login,
+    logout,
+    switchAssignment,
+    refreshUser,
+    loading,
+  }), [session, user, profile, assignments, currentAssignment, loading, login, logout, switchAssignment, refreshUser]);
+
+  return (
+    <AuthContext.Provider value={contextValue}>
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};

@@ -1,0 +1,22 @@
+[functions.google-drive-upload-avatar]
+verify_jwt = false
+[functions.wompi-generate-checkout]
+enabled = true
+verify_jwt = true
+import_map = "./functions/wompi-generate-checkout/deno.json"
+entrypoint = "./functions/wompi-generate-checkout/index.ts"
+[functions.wompi-webhook-handler]
+enabled = true
+verify_jwt = true
+import_map = "./functions/wompi-webhook-handler/deno.json"
+entrypoint = "./functions/wompi-webhook-handler/index.ts"
+[functions.create-subscription-checkout]
+enabled = true
+verify_jwt = true
+import_map = "./functions/create-subscription-checkout/deno.json"
+entrypoint = "./functions/create-subscription-checkout/index.ts"
+
+[api]
+schemas = ["public", "storage", "graphql_public", "schema_introspector"]
+extra_search_path = ["public", "schema_introspector"]
+max_rows = 1000
