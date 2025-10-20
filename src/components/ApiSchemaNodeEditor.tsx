@@ -3,7 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { GLAMTICA_VARIABLES, GlamticaVariable } from '@/lib/glamticaVariables';
+import { SYSTEM_VARIABLES, SystemVariable } from '@/lib/systemVariables';
 import { ApiSchemaNode } from '@/hooks/useIntegrationProviders';
 
 interface ApiSchemaNodeEditorProps {
@@ -19,10 +19,10 @@ const ApiSchemaNodeEditor = ({ node, path, onChange, onAddChild, onRemove }: Api
   const level = path.length - 1;
   const canHaveChildren = node.type === 'object' || node.type === 'array';
 
-  const groupedVariables = GLAMTICA_VARIABLES.reduce((acc, v) => {
+  const groupedVariables = SYSTEM_VARIABLES.reduce((acc, v) => {
     acc[v.group] = [...(acc[v.group] || []), v];
     return acc;
-  }, {} as Record<string, GlamticaVariable[]>);
+  }, {} as Record<string, SystemVariable[]>);
 
   return (
     <div style={{ marginLeft: `${level * 25}px` }} className="p-3 my-2 border-l-2 rounded-r-lg bg-white shadow-sm">
@@ -44,8 +44,8 @@ const ApiSchemaNodeEditor = ({ node, path, onChange, onAddChild, onRemove }: Api
             <SelectItem value="boolean">Booleano</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={node.glamticaMap} onValueChange={(value) => onChange(path, 'glamticaMap', value)}>
-          <SelectTrigger className="h-9"><SelectValue placeholder="Mapear a variable de Glamtica..." /></SelectTrigger>
+        <Select value={node.systemMap} onValueChange={(value) => onChange(path, 'systemMap', value)}>
+          <SelectTrigger className="h-9"><SelectValue placeholder="Mapear a variable del sistema..." /></SelectTrigger>
           <SelectContent>
             {Object.entries(groupedVariables).map(([group, variables]) => (
               <React.Fragment key={group}>

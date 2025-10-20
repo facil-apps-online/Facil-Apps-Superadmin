@@ -10,7 +10,7 @@ function MainContent() {
 
   return (
     <div className="flex-1 flex flex-col w-full overflow-hidden">
-      <Header panelTitle="Glamtica Control Panel" />
+      <Header panelTitle="Superadmin Control Panel" />
       <main className="flex-1 overflow-y-auto p-4 sm:p-6">
         <AnimatePresence mode="wait">
           <motion.div
@@ -36,7 +36,7 @@ export function SuperadminLayout() {
         <AppSidebar 
           menuConfig={superadminNavigationConfig} 
           homeUrl="/"
-          title="Glamtica"
+          title="Superadmin"
           subtitle="Super Admin"
         />
         <MainContent />

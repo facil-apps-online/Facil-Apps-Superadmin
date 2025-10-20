@@ -33,9 +33,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
     setOpenMobile(false);
   };
 
-  useEffect(() => {
-    console.log("SuperadminSidebar: Current path:", location.pathname);
-  }, [location.pathname]);
+
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -45,13 +43,13 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
             <SidebarMenuButton size="lg" asChild>
               <Link to="/" onClick={handleLinkClick}>
                 <img 
-                  src="/favicon-32x32.png" 
-                  alt="Glamtica Logo" 
+                  src="/placeholder.svg" 
+                  alt="Superadmin Logo" 
                   className="size-8"
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">Superadmin</span>
-                  <span className="truncate text-xs">Glamtica.app</span>
+                  <span className="truncate text-xs">Panel de Control</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -73,55 +71,15 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
           </SidebarMenu>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Gestión de Tenants</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Listar Tenants">
-                <Link to="tenants" relative="path" onClick={handleLinkClick}>
-                  <Users />
-                  <span>Listar Tenants</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Crear Tenant">
-                <Link to="create-tenant" relative="path" onClick={handleLinkClick}>
-                  <Building />
-                  <span>Crear Tenant</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
 
         <SidebarGroup>
           <SidebarGroupLabel>Configuración</SidebarGroupLabel>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Planes de Suscripción">
-                <Link to="subscription-plans" relative="path" onClick={handleLinkClick}>
-                  <DollarSign />
-                  <span>Planes de Suscripción</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-	    <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Plataformas">
                 <Link to="platforms" relative="path" onClick={handleLinkClick}>
-                  <DollarSign />
+                  <Puzzle />
                   <span>Plataformas</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-
-
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Precios de Planes">
-                <Link to="plan-pricing" relative="path" onClick={handleLinkClick}>
-                  <Globe />
-                  <span>Precios de Planes</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -172,7 +130,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
             <SidebarMenuItem>
               <SidebarMenuButton asChild tooltip="Integraciones">
                 <Link to="integrations" relative="path" onClick={handleLinkClick}>
-                  <Puzzle />
+                  <Globe />
                   <span>Integraciones</span>
                 </Link>
               </SidebarMenuButton>

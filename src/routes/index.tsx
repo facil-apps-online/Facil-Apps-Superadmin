@@ -21,6 +21,8 @@ import ErrorReports from '../ErrorReports';
 import PerformanceMetrics from '../PerformanceMetrics';
 import AccessManagementPage from '../pages/AccessManagement/index';
 import TranslationAdmin from '@/components/TranslationAdmin';
+import GlobalSettings from '../pages/Settings/GlobalSettings';
+import ProfileSettings from '../pages/Settings/ProfileSettings';
 
 const SuperadminRoutes = () => {
   return (
@@ -53,6 +55,8 @@ const SuperadminRoutes = () => {
         <Route path="performance-metrics" element={<PerformanceMetrics />} />
         <Route path="translations" element={<TranslationAdmin />} />
         <Route path="access-management" element={<AccessManagementPage />} />
+        <Route path="global-settings" element={<GlobalSettings />} />
+        <Route path="profile-settings" element={<ProfileSettings />} />
       </Route>
     </Routes>
   );

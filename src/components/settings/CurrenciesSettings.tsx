@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useCurrencies, useUpdateCurrency, Currency } from '@/hooks/useCurrencies';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
-import { CurrencyDialog } from './CurrencyDialog';
+import { CurrencyDialog } from '@/components/settings/CurrencyDialog';
 import { MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
@@ -38,6 +38,11 @@ export function CurrenciesSettings() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedCurrency, setSelectedCurrency] = useState<Currency | undefined>(undefined);
 
+  const sortedCurrencies = useMemo(() => {
+    if (!currencies) return [];
+    return [...currencies].sort((a, b) => a.name.localeCompare(b.name));
+  }, [currencies]);
+
   const handleEdit = (currency: Currency) => {
     setSelectedCurrency(currency);
     setIsDialogOpen(true);
@@ -67,7 +72,7 @@ export function CurrenciesSettings() {
       <CardContent>
         {screenSize === 'mobile' ? (
           <div className="space-y-4">
-            {currencies?.map((currency) => (
+            {sortedCurrencies.map((currency) => (
               <Card key={currency.id}>
                 <CardHeader>
                   <CardTitle>{currency.name} ({currency.code})</CardTitle>
@@ -109,7 +114,7 @@ export function CurrenciesSettings() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {currencies?.map((currency) => (
+                {sortedCurrencies.map((currency) => (
                   <TableRow key={currency.id}>
                     <TableCell>{currency.name}</TableCell>
                     <TableCell>{currency.code}</TableCell>

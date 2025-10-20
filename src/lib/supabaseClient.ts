@@ -1,13 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
-console.log('[supabaseClient.ts] Reading env vars:');
-
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-console.log('VITE_SUPABASE_URL:', SUPABASE_URL);
-console.log('VITE_SUPABASE_PUBLISHABLE_KEY:', SUPABASE_PUBLISHABLE_KEY);
 
 // Throw an error if the environment variables are not set.
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
@@ -25,8 +20,6 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     headers: {},
   },
 });
-
-console.log('[supabaseClient.ts] Supabase client initialized.');
 
 // The following utility functions remain unchanged.
 import { toZonedTime, fromZonedTime } from 'date-fns-tz';

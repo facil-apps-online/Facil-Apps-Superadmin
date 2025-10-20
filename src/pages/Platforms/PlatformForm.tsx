@@ -53,7 +53,7 @@ export const PlatformForm: React.FC<PlatformFormProps> = ({
             <FormItem>
               <FormLabel>Nombre de la Plataforma</FormLabel>
               <FormControl>
-                <Input placeholder="Ej: Glamtica" {...field} />
+                <Input placeholder="Ej: System" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { LocalizationDialog } from './LocalizationDialog';
+import { LocalizationDialog } from '@/components/settings/LocalizationDialog';
 import { useScreenSize } from '@/hooks/useScreenSize';
 
 export function LocalizationsSettings() {

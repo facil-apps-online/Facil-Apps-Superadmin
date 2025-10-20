@@ -1,8 +1,8 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { CountriesSettings } from './CountriesSettings';
-import { CurrenciesSettings } from './CurrenciesSettings';
-import { LocalizationsSettings } from './LocalizationsSettings';
+import { CountriesSettings } from '@/components/settings/CountriesSettings';
+import { CurrenciesSettings } from '@/components/settings/CurrenciesSettings';
+import { LocalizationsSettings } from '@/components/settings/LocalizationsSettings';
 
 export default function SystemCatalogs() {
   return (

@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { CountryDialog } from './CountryDialog';
+import { CountryDialog } from '@/components/settings/CountryDialog';
 import { useScreenSize } from '@/hooks/useScreenSize';
 
 export function CountriesSettings() {
@@ -25,7 +25,10 @@ export function CountriesSettings() {
 
   const countriesWithDetails = useMemo(() => {
     if (isLoading || !countries) return [];
-    return countries.map(country => ({
+
+    const sortedCountries = [...countries].sort((a, b) => a.name.localeCompare(b.name));
+
+    return sortedCountries.map(country => ({
       ...country,
       currencyName: currencies?.find(c => c.id === country.default_currency_id)?.name || 'N/A',
       localizationName: localizations?.find(l => l.id === country.default_localization_id)?.name || 'N/A',
@@ -71,7 +74,7 @@ export function CountriesSettings() {
       </CardHeader>
       <CardContent className="text-sm space-y-2">
         <div><strong>Prefijo:</strong> {country.prefix}</div>
-        <div><strong>Zona Horaria:</strong> {country.timezone || 'N/A'}</div>
+        <div><strong>Zonas Horarias:</strong> {country.timezones?.map(tz => tz.name).join(', ') || 'N/A'}</div>
       </CardContent>
       <CardFooter>
         <Button variant="outline" size="sm" className="w-full" onClick={() => handleEdit(country)}>
@@ -97,7 +100,7 @@ export function CountriesSettings() {
       <TableCell>{country.prefix}</TableCell>
       <TableCell>{country.currencyName}</TableCell>
       <TableCell>{country.localizationName}</TableCell>
-      <TableCell>{country.timezone || 'N/A'}</TableCell>
+      <TableCell>{country.timezones?.map(tz => tz.name).join(', ') || 'N/A'}</TableCell>
       <TableCell className="text-right">
         <Button variant="ghost" size="sm" onClick={() => handleEdit(country)}>
           Editar
@@ -135,7 +138,7 @@ export function CountriesSettings() {
                   <TableHead>Prefijo</TableHead>
                   <TableHead>Moneda</TableHead>
                   <TableHead>Localización</TableHead>
-                  <TableHead>Zona Horaria</TableHead>
+                  <TableHead>Zonas Horarias</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>

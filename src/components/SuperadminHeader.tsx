@@ -49,7 +49,7 @@ export function SuperadminHeader() {
       {/* Left Section */}
       <div className="flex items-center gap-2 sm:gap-4">
         <SidebarTrigger className="p-2 hover:bg-slate-100 rounded-lg transition-colors" />
-        <h1 className="text-lg sm:text-2xl font-bold truncate">Glamtica Control Panel</h1>
+        <h1 className="text-lg sm:text-2xl font-bold truncate">Superadmin Control Panel</h1>
       </div>
 
       {/* Right Section */}

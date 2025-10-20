@@ -7,7 +7,7 @@ export interface ApiSchemaNode {
   id: string;
   key: string;
   type: 'object' | 'array' | 'string' | 'number' | 'boolean';
-  glamticaMap: string;
+  systemMap: string;
   children?: ApiSchemaNode[];
 }
 export interface ConfigField {

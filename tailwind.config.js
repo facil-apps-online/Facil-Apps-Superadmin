@@ -53,10 +53,7 @@ export default {
     				DEFAULT: 'hsl(var(--card))',
     				foreground: 'hsl(var(--card-foreground))'
     			},
-    			brand: {
-    				primary: '#372537',
-    				accent: '#451d35'
-    			},
+
     			sidebar: {
     				DEFAULT: 'hsl(var(--sidebar-background))',
     				foreground: 'hsl(var(--sidebar-foreground))',

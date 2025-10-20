@@ -25,7 +25,7 @@ const fetchPlatformDetails = async (platformId: string) => {
 };
 
 const fetchSystemCatalogs = async () => {
-  const { data: countries, error: countriesError } = await supabase.from('countries').select('*').order('name');
+  const { data: countries, error: countriesError } = await supabase.from('countries').select('*').eq('is_active', true).order('name');
   const { data: languages, error: languagesError } = await supabase.from('languages').select('*').order('name');
   const { data: currencies, error: currenciesError } = await supabase.from('currencies').select('*').order('name');
   // TODO: Add timezones fetching when available

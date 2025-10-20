@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { supabase } from '@/lib/supabaseClient';
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
-import { PlusCircle, Edit, Trash2, BookKey, Package, Settings, Search } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, BookKey, Package, Settings, Search, Users } from 'lucide-react';
 
 interface Platform {
   id: string;
@@ -42,6 +42,11 @@ export default function PlatformsList() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [deleteAlert, setDeleteAlert] = useState<{ isOpen: boolean; platformId: string | null; platformName: string | null }>({ isOpen: false, platformId: null, platformName: null });
+
+  const sortedPlatforms = useMemo(() => {
+    if (!platforms) return [];
+    return [...platforms].sort((a, b) => a.name.localeCompare(b.name));
+  }, [platforms]);
 
   const handleDeleteRequest = (platformId: string, platformName: string) => {
     setDeleteAlert({ isOpen: true, platformId, platformName });
@@ -114,8 +119,8 @@ export default function PlatformsList() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {platforms && platforms.length > 0 ? (
-                platforms.map((platform) => (
+              {sortedPlatforms && sortedPlatforms.length > 0 ? (
+                sortedPlatforms.map((platform) => (
                   <TableRow key={platform.id}>
                     <TableCell className="font-medium">{platform.name}</TableCell>
                     <TableCell>{platform.description || 'N/A'}</TableCell>
@@ -145,6 +150,14 @@ export default function PlatformsList() {
                           title="Catálogo de Activos"
                         >
                           <Package className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => navigate(`/platforms/${platform.id}/tenants`)}
+                          title="Ver Tenants"
+                        >
+                          <Users className="h-4 w-4" />
                         </Button>
                         <Button 
                           variant="outline" 

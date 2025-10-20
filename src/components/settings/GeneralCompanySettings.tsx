@@ -1,3 +1,4 @@
+
 import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,7 +20,7 @@ const settingsSchema = z.object({
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
 
-export function GeneralSettingsTab() {
+export function GeneralCompanySettings() {
   const { data: settings, isLoading } = useGlobalSettings();
   const { mutate: updateSettings, isPending: isUpdating } = useUpdateGlobalSettings();
   const { toast } = useToast();
@@ -76,7 +77,7 @@ export function GeneralSettingsTab() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Nombre de la Empresa</FormLabel>
-                    <FormControl><Input placeholder="Ej: Glamtica S.A.S" {...field} /></FormControl>
+                    <FormControl><Input placeholder="Ej: Empresa S.A.S" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -87,7 +88,7 @@ export function GeneralSettingsTab() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Email de Contacto</FormLabel>
-                    <FormControl><Input placeholder="contacto@glamtica.app" {...field} /></FormControl>
+                    <FormControl><Input placeholder="contacto@empresa.com" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

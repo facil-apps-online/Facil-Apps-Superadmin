@@ -107,12 +107,12 @@ export default function IntegrationProviderForm() {
   const handleAuthFieldChange = (key: string, value: any) => setProvider(prev => ({ ...prev, authentication_config: { ...prev.authentication_config, [key]: value } }));
 
   const updateNestedNode = (nodes: ApiSchemaNode[], path: number[], field: keyof ApiSchemaNode, value: any): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; if (newPath.length === 0) return { ...node, [field]: value }; return { ...node, children: updateNestedNode(node.children || [], newPath, field, value) }; }); };
-  const addNestedNode = (nodes: ApiSchemaNode[], path: number[]): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', glamticaMap: '' }; if (newPath.length === 0) return { ...node, children: [...(node.children || []), newNode] }; return { ...node, children: addNestedNode(node.children || [], newPath) }; }); };
+  const addNestedNode = (nodes: ApiSchemaNode[], path: number[]): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', systemMap: '' }; if (newPath.length === 0) return { ...node, children: [...(node.children || []), newNode] }; return { ...node, children: addNestedNode(node.children || [], newPath) }; }); };
   const removeNestedNode = (nodes: ApiSchemaNode[], path: number[]): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); if (newPath.length === 0) return nodes.filter((_, i) => i !== index); return nodes.map((node, i) => { if (i !== index) return node; return { ...node, children: removeNestedNode(node.children || [], newPath) }; }); };
   const handleSchemaNodeChange = (path: number[], field: keyof ApiSchemaNode, value: any) => setProvider(prev => ({ ...prev, apiSchema: updateNestedNode(prev.apiSchema || [], path, field, value) }));
   const handleAddSchemaNode = (path: number[]) => setProvider(prev => ({ ...prev, apiSchema: addNestedNode(prev.apiSchema || [], path) }));
   const handleRemoveSchemaNode = (path: number[]) => setProvider(prev => ({ ...prev, apiSchema: removeNestedNode(prev.apiSchema || [], path) }));
-  const addRootSchemaNode = () => { const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', glamticaMap: '' }; setProvider(prev => ({ ...prev, apiSchema: [...(prev.apiSchema || []), newNode] })); };
+  const addRootSchemaNode = () => { const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', systemMap: '' }; setProvider(prev => ({ ...prev, apiSchema: [...(prev.apiSchema || []), newNode] })); };
   
   const handleTestConnection = async () => {
     setIsTesting(true);

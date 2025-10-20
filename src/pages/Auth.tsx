@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { motion } from 'framer-motion';
-import Logo from '@/assets/images/glamtica.app.png';
+
 import { useCreatePasswordResetToken } from '@/hooks/useUserActions';
 import {
   AlertDialog,
@@ -114,79 +114,62 @@ const AuthPage: React.FC = () => {
         exit="out"
         variants={pageVariants}
         transition={pageTransition}
-        className="min-h-screen w-full bg-brand-primary lg:grid lg:grid-cols-2"
+        className="min-h-screen w-full bg-white flex items-center justify-center p-6"
       >
-        {/* Columna Izquierda */}
-        <div className="hidden lg:flex flex-col items-center justify-center p-10 text-white">
-          <img src={Logo} alt="Glamtica.app Logo" className="w-48 h-48 mb-6" />
-          <h1 className="text-4xl font-bold text-center">Bienvenido a Glamtica.app</h1>
-          <p className="mt-4 text-lg text-center text-gray-300">La solución todo en uno para la gestión de tu negocio de belleza.</p>
-        </div>
-
-        {/* Columna Derecha */}
-        <div className="flex items-center justify-center p-6 sm:p-12 lg:bg-background">
-          <div className="w-full max-w-md">
-            <div className="lg:hidden flex justify-center mb-8">
-              <img src={Logo} alt="Glamtica.app Logo" className="w-36 h-36" />
-            </div>
-            <Card className="border-none shadow-none lg:border lg:shadow-sm">
-              <CardHeader className="text-center lg:text-left">
-                <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
-                <CardDescription>Accede a tu cuenta para continuar</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleLogin} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email">Email</Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      required
-                      className="bg-gray-50"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label htmlFor="login-password">Contraseña</Label>
-                      <Button
-                        type="button"
-                        variant="link"
-                        className="p-0 h-auto text-xs"
-                        onClick={handlePasswordReset}
-                        disabled={createPasswordResetTokenMutation.isPending}
-                      >
-                        ¿Olvidaste tu contraseña?
-                      </Button>
-                    </div>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="bg-gray-50"
-                    />
-                  </div>
-                  <Button 
-                    type="submit" 
-                    className="w-full mt-6" 
-                    disabled={loading}
-                  >
-                    {loading ? "Cargando..." : "Iniciar Sesión"}
-                  </Button>
-                </form>
-              </CardContent>
-              <CardFooter className="flex justify-center text-sm">
-                <p>¿No tienes una cuenta?&nbsp;
-                  <Link to="/register-tenant" className="font-semibold text-brand-primary hover:underline">
-                    Regístrate aquí
-                  </Link>
-                </p>
-              </CardFooter>
-            </Card>
+        <div className="w-full max-w-md">
+          <div className="flex justify-center mb-8">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-gray-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           </div>
+          <Card className="border-none shadow-none sm:border sm:shadow-sm">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
+              <CardDescription>Accede a tu cuenta para continuar</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLogin} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="login-email">Email</Label>
+                  <Input
+                    id="login-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className="bg-gray-50"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Contraseña</Label>
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="p-0 h-auto text-xs"
+                      onClick={handlePasswordReset}
+                      disabled={createPasswordResetTokenMutation.isPending}
+                    >
+                      ¿Olvidaste tu contraseña?
+                    </Button>
+                  </div>
+                  <Input
+                    id="login-password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    className="bg-gray-50"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full mt-6" 
+                  disabled={loading}
+                >
+                  {loading ? "Cargando..." : "Iniciar Sesión"}
+                </Button>
+              </form>
+            </CardContent>
+                          <CardFooter />          </Card>
         </div>
       </motion.div>
 

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTenants, useDeleteTenant, useSetSystemOwner } from '@/hooks/useSuperadminTenants';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
@@ -25,8 +25,9 @@ import {
 } from "@/components/ui/alert-dialog";
 
 export default function TenantsList() {
+  const { platformId: platformIdFromParams } = useParams<{ platformId: string }>();
   const [searchTerm, setSearchTerm] = useState('');
-  const [platformId, setPlatformId] = useState<string | undefined>(undefined);
+  const [platformId, setPlatformId] = useState<string | undefined>(platformIdFromParams);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
   const { data: tenants, isLoading, isError, error } = useTenants({ 
@@ -77,13 +78,13 @@ export default function TenantsList() {
     }
   };
 
-  const platformOptions = platforms?.map(p => ({ value: p.id, label: p.name })) || [];
+  const platformName = platforms?.find(p => p.id === platformIdFromParams)?.name;
 
   return (
     <>
       <div className="w-full">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">Listado de Tenants</h1>
+          <h1 className="text-2xl font-bold">{platformIdFromParams ? `Tenants de ${platformName}` : 'Listado de Tenants'}</h1>
           <Button asChild>
             <Link to="/tenants/create">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -103,14 +104,17 @@ export default function TenantsList() {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="w-full md:w-56">
-            <FilterableSelect
-              options={platformOptions}
-              value={platformId || ''}
-              onValueChange={setPlatformId}
-              placeholder="Filtrar por aplicación..."
-            />
-          </div>
+          {!platformIdFromParams && (
+            <div className="w-full md:w-56">
+              <FilterableSelect
+                options={platformOptions}
+                value={platformId || ''}
+                onValueChange={setPlatformId}
+                placeholder="Filtrar por aplicación..."
+                disabled={!!platformIdFromParams}
+              />
+            </div>
+          )}
         </div>
 
         {isLoading ? (
@@ -126,7 +130,7 @@ export default function TenantsList() {
                     <CardTitle>{tenant.name}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-2 text-sm">
-                    <div><strong>Plataforma:</strong> {tenant.platform?.name || 'N/A'}</div>
+                    {!platformIdFromParams && <div><strong>Plataforma:</strong> {tenant.platform?.name || 'N/A'}</div>}
                     <div className="flex items-center gap-2">
                       <strong>País:</strong>
                       {tenant.countries?.iso_code ? (
@@ -158,7 +162,7 @@ export default function TenantsList() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nombre</TableHead>
-                  <TableHead>Plataforma</TableHead>
+                  {!platformIdFromParams && <TableHead>Plataforma</TableHead>}
                   <TableHead>Propietario</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>País</TableHead>
@@ -169,7 +173,7 @@ export default function TenantsList() {
                 {tenants.map((tenant) => (
                   <TableRow key={tenant.id}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
-                    <TableCell>{tenant.platform?.name || 'N/A'}</TableCell>
+                    {!platformIdFromParams && <TableCell>{tenant.platform?.name || 'N/A'}</TableCell>}
                     <TableCell>
                       <Switch
                         checked={!!tenant.is_system_owner}

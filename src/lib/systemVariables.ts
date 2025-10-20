@@ -1,10 +1,10 @@
-export interface GlamticaVariable {
+export interface SystemVariable {
   group: string;
   value: string;
   label: string;
 }
 
-export const GLAMTICA_VARIABLES: GlamticaVariable[] = [
+export const SYSTEM_VARIABLES: SystemVariable[] = [
   // Venta General
   { group: 'Venta', value: '{{venta.numero_factura}}', label: 'Número de Factura' },
   { group: 'Venta', value: '{{venta.fecha_emision}}', label: 'Fecha de Emisión' },
