@@ -21,5 +21,6 @@ export const usePlatforms = (searchTerm?: string) => {
   return useQuery<Platform[], Error>({
     queryKey: ['platforms', searchTerm],
     queryFn: () => fetchPlatforms(searchTerm),
+    select: (data) => data.sort((a, b) => a.name.localeCompare(b.name)),
   });
 };

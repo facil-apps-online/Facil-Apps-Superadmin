@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabaseClient';
 export interface PlatformAssignment {
   user_id: string;
   full_name: string | null;
+  first_name: string | null;
+  last_name: string | null;
   email: string;
   platform_roles: {
     app_super_admin?: { platform_id: string; platform_name: string; }[];

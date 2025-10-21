@@ -41,6 +41,12 @@ export const superadminNavigationConfig = [
         url: "/access-management",
         icon: Users,
         roles: ['super_admin']
+      },
+      {
+        title: "Crear Usuario",
+        url: "/user-management",
+        icon: Users,
+        roles: ['super_admin']
       }
     ]
   },

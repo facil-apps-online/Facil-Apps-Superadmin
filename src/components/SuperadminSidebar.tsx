@@ -91,6 +91,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="Gestión de Usuarios">
+                <Link to="/access-management" onClick={handleLinkClick}>
+                  <Users />
+                  <span>Gestión de Usuarios</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
           </SidebarMenu>
         </SidebarGroup>
 

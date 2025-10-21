@@ -1,14 +1,11 @@
-
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 
 // --- Interfaces ---
-export interface CreateUserPayload {
-  email: string;
-  password?: string; // Opcional, puede que se invite al usuario
-  fullName: string;
-  role: 'super_admin' | 'app_super_admin' | 'investor' | 'vendor';
-  assignments?: any; // Dependerá del rol
+export interface UpdateUserPayload {
+  userId: string;
+  firstName: string;
+  lastName: string;
 }
 
 // --- Helper Function ---
@@ -23,17 +20,16 @@ const invokeSuperadminAction = async (action: string, payload?: any) => {
   return data;
 };
 
-// --- CREATE User ---
-const createUser = async (payload: CreateUserPayload): Promise<any> => {
-  return invokeSuperadminAction('create_user', payload);
+// --- UPDATE User ---
+const updateUser = async (payload: UpdateUserPayload): Promise<any> => {
+  return invokeSuperadminAction('update_user_name', payload);
 };
 
-export const useCreateUser = () => {
+export const useUpdateUser = () => {
   const queryClient = useQueryClient();
-  return useMutation<any, Error, CreateUserPayload>({
-    mutationFn: createUser,
+  return useMutation<any, Error, UpdateUserPayload>({
+    mutationFn: updateUser,
     onSuccess: () => {
-      // Invalidar queries relevantes, por ejemplo, la lista de usuarios
       queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
     },
   });

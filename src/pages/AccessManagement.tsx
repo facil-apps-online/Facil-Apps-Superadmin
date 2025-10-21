@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { usePlatformLevelAssignments, useRemovePlatformAssignment, PlatformAssignment } from '@/hooks/usePlatformLevelAssignments';
 import { PlusCircle, Trash2 } from 'lucide-react';
-import { AssignRoleDialog } from './AssignRoleDialog';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -25,13 +24,31 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+import { CreateUserDialog } from './CreateUserDialog';
+import { ManageUserDialog } from './ManageUserDialog';
+
 export default function AccessManagementPage() {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isCreateUserDialogOpen, setIsCreateUserDialogOpen] = useState(false);
+  const [isManageUserDialogOpen, setIsManageUserDialogOpen] = useState(false);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null); // Store ID only
   const [deleteAlert, setDeleteAlert] = useState<{ isOpen: boolean; assignment: any | null }>({ isOpen: false, assignment: null });
   
   const { data: assignments, isLoading, isError, error } = usePlatformLevelAssignments();
   const removeAssignmentMutation = useRemovePlatformAssignment();
   const { toast } = useToast();
+
+  // Find the full user object from the latest query data
+  const selectedUserForManage = assignments?.find(u => u.user_id === selectedUserId) || null;
+
+  const handleOpenManageUserDialog = (user: PlatformAssignment) => {
+    setSelectedUserId(user.user_id);
+    setIsManageUserDialogOpen(true);
+  };
+
+  const handleCloseManageUserDialog = () => {
+    setIsManageUserDialogOpen(false);
+    setSelectedUserId(null);
+  };
 
   const handleRemove = () => {
     if (!deleteAlert.assignment) return;
@@ -48,22 +65,30 @@ export default function AccessManagementPage() {
   };
 
   const renderPlatformRoles = (user: PlatformAssignment) => {
-    if (!user.platform_roles) return <TableCell>Sin roles especiales</TableCell>;
+    // This function now receives the most up-to-date user object on each render
+    const hasAppSuperAdminRoles = user.platform_roles?.app_super_admin && user.platform_roles.app_super_admin.length > 0;
+    const hasInvestorRoles = user.platform_roles?.investor && user.platform_roles.investor.length > 0;
+    const isSuperAdmin = user.platform_roles?.super_admin;
 
     return (
       <TableCell>
         <div className="flex flex-col gap-2">
-          {user.platform_roles.app_super_admin && (
+          {isSuperAdmin && (
+            <div className="flex items-center gap-2">
+              <Badge>Super Admin</Badge>
+            </div>
+          )}
+          {hasAppSuperAdminRoles && (
             <div className="flex items-center gap-2">
               <Badge variant="secondary">App Super Admin</Badge>
               <div className="flex flex-wrap gap-1">
-                {user.platform_roles.app_super_admin.map((platformName, index) => (
-                  <Badge key={index} variant="outline">{platformName}</Badge>
+                {user.platform_roles.app_super_admin.map((platform, index) => (
+                  <Badge key={index} variant="outline">{platform.platform_name}</Badge>
                 ))}
               </div>
             </div>
           )}
-          {user.platform_roles.investor && (
+          {hasInvestorRoles && (
              <div className="flex items-center gap-2">
               <Badge variant="success">Investor</Badge>
               <div className="flex flex-wrap gap-1">
@@ -72,6 +97,9 @@ export default function AccessManagementPage() {
                 ))}
               </div>
             </div>
+          )}
+          {(!isSuperAdmin && !hasAppSuperAdminRoles && !hasInvestorRoles) && (
+             <p className="text-muted-foreground">Sin roles especiales</p>
           )}
         </div>
       </TableCell>
@@ -83,13 +111,15 @@ export default function AccessManagementPage() {
       <div className="w-full space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Gestión de Accesos</h1>
-            <p className="text-muted-foreground">Asigna roles especiales a nivel de plataforma.</p>
+            <h1 className="text-2xl font-bold">Gestión de Usuarios y Accesos</h1>
+            <p className="text-muted-foreground">Crea nuevos usuarios y gestiona sus roles y asignaciones de plataforma.</p>
           </div>
-          <Button onClick={() => setIsDialogOpen(true)}>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Asignar Rol
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsCreateUserDialogOpen(true)} variant="outline">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Usuario
+            </Button>
+          </div>
         </div>
 
         <Card>
@@ -119,7 +149,9 @@ export default function AccessManagementPage() {
                     </TableCell>
                     {renderPlatformRoles(user)}
                     <TableCell className="text-right">
-                      {/* Lógica de borrado se podría implementar aquí si se quisiera borrar por rol/plataforma */}
+                      <Button variant="outline" size="sm" onClick={() => handleOpenManageUserDialog(user)}>
+                        Gestionar
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -129,7 +161,12 @@ export default function AccessManagementPage() {
         </Card>
       </div>
 
-      {/* <AssignRoleDialog isOpen={isDialogOpen} onOpenChange={setIsDialogOpen} /> */}
+      <CreateUserDialog isOpen={isCreateUserDialogOpen} onOpenChange={setIsCreateUserDialogOpen} />
+      <ManageUserDialog
+        isOpen={isManageUserDialogOpen}
+        onOpenChange={handleCloseManageUserDialog}
+        user={selectedUserForManage}
+      />
 
       <AlertDialog open={deleteAlert.isOpen} onOpenChange={(isOpen) => setDeleteAlert({ ...deleteAlert, isOpen })}>
         <AlertDialogContent>
