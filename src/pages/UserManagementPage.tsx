@@ -31,14 +31,18 @@ export default function UserManagementPage() {
   const [investorPlatforms, setInvestorPlatforms] = useState<{ platformId: string; stake: number }[]>([]);
 
   // State for vendor
-  const [vendorPlatform, setVendorPlatform] = useState<string>('');
-  const [vendorTenant, setVendorTenant] = useState<string>('');
+  const [vendorPlatforms, setVendorPlatforms] = useState<string[]>([]);
 
   const { data: platforms, isLoading: isLoadingPlatforms } = usePlatforms();
-  const { data: tenants, isLoading: isLoadingTenants } = useTenants(vendorPlatform);
 
   const handlePlatformSelect = (platformId: string) => {
     setSelectedPlatforms(prev => 
+      prev.includes(platformId) ? prev.filter(id => id !== platformId) : [...prev, platformId]
+    );
+  };
+
+  const handleVendorPlatformSelect = (platformId: string) => {
+    setVendorPlatforms(prev => 
       prev.includes(platformId) ? prev.filter(id => id !== platformId) : [...prev, platformId]
     );
   };
@@ -76,7 +80,7 @@ export default function UserManagementPage() {
     } else if (role === 'investor') {
       assignments = investorPlatforms;
     } else if (role === 'vendor') {
-      assignments = { tenantId: vendorTenant };
+      assignments = vendorPlatforms;
     }
 
     const payload: CreateUserPayload = { email, password, fullName, role, assignments };
@@ -218,37 +222,45 @@ export default function UserManagementPage() {
             {role === 'vendor' && (
               <Card className="mt-4">
                 <CardHeader>
-                  <CardTitle>Tenant para Vendedor</CardTitle>
+                  <CardTitle>Plataformas para Vendedor</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                   <div className="grid gap-2">
-                      <Label>Plataforma</Label>
-                      <Select onValueChange={setVendorPlatform} value={vendorPlatform}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecciona una plataforma" />
-                        </SelectTrigger>
-                        <SelectContent>
+                <CardContent>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        className="w-full justify-between"
+                      >
+                        {vendorPlatforms.length > 0
+                          ? `${vendorPlatforms.length} plataforma(s) seleccionada(s)`
+                          : "Selecciona plataformas..."}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Buscar plataforma..." />
+                        <CommandEmpty>No se encontraron plataformas.</CommandEmpty>
+                        <CommandGroup>
                           {platforms?.map(platform => (
-                            <SelectItem key={platform.id} value={platform.id}>{platform.name}</SelectItem>
+                            <CommandItem
+                              key={platform.id}
+                              onSelect={() => handleVendorPlatformSelect(platform.id)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  vendorPlatforms.includes(platform.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {platform.name}
+                            </CommandItem>
                           ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {vendorPlatform && (
-                       <div className="grid gap-2">
-                          <Label>Tenant</Label>
-                          <Select onValueChange={setVendorTenant} value={vendorTenant} disabled={isLoadingTenants}>
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecciona un tenant" />
-                            </Trigger>
-                            <SelectContent>
-                              {tenants?.map(tenant => (
-                                <SelectItem key={tenant.id} value={tenant.id}>{tenant.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-                    )}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </CardContent>
               </Card>
             )}

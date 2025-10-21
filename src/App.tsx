@@ -31,6 +31,7 @@ import CreatePlatform from '@/pages/Platforms/CreatePlatform';
 import EditTenant from '@/pages/EditTenant';
 import TenantDetails from '@/pages/TenantDetails';
 import GlobalSettings from '@/pages/Settings/GlobalSettings';
+import VendorDashboard from '@/pages/VendorDashboard';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
 
 
@@ -59,6 +60,7 @@ function App() {
                 <Route path="/tenants/:tenantId/edit" element={<EditTenant />} />
                 <Route path="/tenants/:tenantId" element={<TenantDetails />} />
                 <Route path="/platforms" element={<PlatformsList />} />
+                <Route path="/platforms/:platformId/dashboard" element={<SuperadminStats />} />
                 <Route path="/platforms/create" element={<CreatePlatform />} />
                 <Route path="/platforms/edit/:id" element={<EditPlatform />} />
                 <Route path="/platforms/:platformId/settings" element={<PlatformSettings />} />
@@ -81,6 +83,7 @@ function App() {
                 {/* <Route path="/plan-pricing" element={<PlanPricingManager />} /> */}
                 <Route path="/global-settings" element={<GlobalSettings />} />
                 <Route path="/profile-settings" element={<ProfileSettings />} />
+                <Route path="/commissions" element={<VendorDashboard />} />
                 {/* Aquí irían el resto de tus rutas protegidas */}
               </Route>
             </Route>

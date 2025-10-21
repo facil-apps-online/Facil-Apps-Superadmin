@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useTenants, useDeleteTenant, useSetSystemOwner } from '@/hooks/useSuperadminTenants';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -23,6 +23,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments';
 
 export default function TenantsList() {
   const { platformId: platformIdFromParams } = useParams<{ platformId: string }>();
@@ -30,12 +32,54 @@ export default function TenantsList() {
   const [platformId, setPlatformId] = useState<string | undefined>(platformIdFromParams);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const { data: tenants, isLoading, isError, error } = useTenants({ 
+  const { user, currentAssignment } = useAuth();
+  const role = currentAssignment?.role;
+  const { data: allAssignments } = usePlatformLevelAssignments();
+
+  const { data: allPlatforms, isLoading: isLoadingPlatforms } = usePlatforms();
+
+  const assignedPlatforms = useMemo(() => {
+    if (role === 'super_admin') return allPlatforms || [];
+    if (!user || !allAssignments || !allPlatforms) return [];
+    const currentUserAssignments = allAssignments?.find(a => a.user_id === user?.id);
+    if (!currentUserAssignments) return [];
+
+    const platformIds = [
+      ...(currentUserAssignments.platform_roles?.app_super_admin?.map(p => p.platform_id) || []),
+      ...(currentUserAssignments.platform_roles?.investor?.map(p => p.platform_id) || [])
+    ];
+    
+    return allPlatforms.filter(p => platformIds.includes(p.id));
+  }, [user, allAssignments, role, allPlatforms]);
+
+  const platformOptions = useMemo(() => {
+    return (assignedPlatforms || []).map(p => ({ value: p.id, label: p.name }));
+  }, [assignedPlatforms]);
+
+  const { data: allTenants, isLoading, isError, error } = useTenants({ 
     searchTerm: debouncedSearchTerm,
-    platformId: platformId
+    platformId: role === 'super_admin' ? platformId : undefined
   });
-  
-  const { data: platforms, isLoading: isLoadingPlatforms } = usePlatforms();
+
+  const tenants = useMemo(() => {
+    if (!allTenants) return [];
+    
+    if (role === 'super_admin') {
+        return platformId ? allTenants.filter(t => t.platform?.id === platformId) : allTenants;
+    }
+
+    const assignedPlatformIds = assignedPlatforms.map(p => p.id);
+    let filteredTenants = allTenants.filter(tenant => 
+        tenant.platform?.id && assignedPlatformIds.includes(tenant.platform.id)
+    );
+
+    if (platformId) {
+        filteredTenants = filteredTenants.filter(t => t.platform?.id === platformId);
+    }
+    
+    return filteredTenants;
+  }, [allTenants, role, assignedPlatforms, platformId]);
+
   const deleteTenantMutation = useDeleteTenant();
   const setSystemOwnerMutation = useSetSystemOwner();
   const { toast } = useToast();
@@ -78,19 +122,21 @@ export default function TenantsList() {
     }
   };
 
-  const platformName = platforms?.find(p => p.id === platformIdFromParams)?.name;
+  const platformName = allPlatforms?.find(p => p.id === platformIdFromParams)?.name;
 
   return (
     <>
       <div className="w-full">
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-2xl font-bold">{platformIdFromParams ? `Tenants de ${platformName}` : 'Listado de Tenants'}</h1>
-          <Button asChild>
-            <Link to="/tenants/create">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear
-            </Link>
-          </Button>
+          {role === 'super_admin' && (
+            <Button asChild>
+              <Link to="/tenants/create">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear
+              </Link>
+            </Button>
+          )}
         </div>
 
         <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -139,20 +185,26 @@ export default function TenantsList() {
                       <span>{tenant.countries?.name || 'N/A'}</span>
                     </div>
                     <div><strong>Estado:</strong> <Badge variant={getStatusVariant(tenant.subscription_status)}>{tenant.subscription_status}</Badge></div>
-                    <div className="flex items-center justify-between">
-                      <strong>Propietario:</strong>
-                      <Switch
-                        checked={tenant.is_system_owner}
-                        onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
-                        disabled={setSystemOwnerMutation.isPending}
-                        aria-label="Marcar como propietario del sistema"
-                      />
-                    </div>
+                    {role === 'super_admin' && (
+                        <div className="flex items-center justify-between">
+                        <strong>Propietario:</strong>
+                        <Switch
+                            checked={tenant.is_system_owner}
+                            onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
+                            disabled={setSystemOwnerMutation.isPending}
+                            aria-label="Marcar como propietario del sistema"
+                        />
+                        </div>
+                    )}
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2">
                     <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}`}><Eye className="mr-2 h-4 w-4" /> Ver</Link></Button>
-                    <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
-                    <Button variant="destructive" size="icon" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="h-4 w-4" /></Button>
+                    {role === 'super_admin' && (
+                        <>
+                        <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="h-4 w-4" /></Button>
+                        </>
+                    )}
                   </CardFooter>
                 </Card>
               ))}
@@ -163,7 +215,7 @@ export default function TenantsList() {
                 <TableRow>
                   <TableHead>Nombre</TableHead>
                   {!platformIdFromParams && <TableHead>Plataforma</TableHead>}
-                  <TableHead>Propietario</TableHead>
+                  {role === 'super_admin' && <TableHead>Propietario</TableHead>}
                   <TableHead>Estado</TableHead>
                   <TableHead>País</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
@@ -174,14 +226,16 @@ export default function TenantsList() {
                   <TableRow key={tenant.id}>
                     <TableCell className="font-medium">{tenant.name}</TableCell>
                     {!platformIdFromParams && <TableCell>{tenant.platform?.name || 'N/A'}</TableCell>}
-                    <TableCell>
-                      <Switch
-                        checked={!!tenant.is_system_owner}
-                        onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
-                        disabled={setSystemOwnerMutation.isPending}
-                        aria-label={`Marcar a ${tenant.name} como propietario del sistema`}
-                      />
-                    </TableCell>
+                    {role === 'super_admin' && (
+                        <TableCell>
+                        <Switch
+                            checked={!!tenant.is_system_owner}
+                            onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
+                            disabled={setSystemOwnerMutation.isPending}
+                            aria-label={`Marcar a ${tenant.name} como propietario del sistema`}
+                        />
+                        </TableCell>
+                    )}
                     <TableCell><Badge variant={getStatusVariant(tenant.subscription_status)}>{tenant.subscription_status}</Badge></TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -193,8 +247,12 @@ export default function TenantsList() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}`}><Eye className="mr-2 h-4 w-4" /> Ver Detalles</Link></Button>
-                      <Button variant="outline" size="sm" asChild className="ml-2"><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
-                      <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="mr-2 h-4 w-4" /> Borrar</Button>
+                      {role === 'super_admin' && (
+                        <>
+                            <Button variant="outline" size="sm" asChild className="ml-2"><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
+                            <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="mr-2 h-4 w-4" /> Borrar</Button>
+                        </>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

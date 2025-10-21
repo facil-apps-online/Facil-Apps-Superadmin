@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -15,25 +15,25 @@ import {
 import {
   BarChart3,
   Users,
-  DollarSign,
   Globe,
   Settings,
   AlertTriangle,
   Bug,
   Activity,
-  Building,
   Puzzle,
+  DollarSign,
 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation();
   const { setOpenMobile } = useSidebar();
+  const { currentAssignment } = useAuth();
+  const role = currentAssignment?.role;
 
   const handleLinkClick = () => {
     setOpenMobile(false);
   };
-
-
 
   return (
     <Sidebar variant="inset" collapsible="icon" {...props}>
@@ -57,95 +57,125 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
         </SidebarMenu>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Estadísticas">
-                <Link to="/" onClick={handleLinkClick}>
-                  <BarChart3 />
-                  <span>Estadísticas</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+        {role === 'vendor' ? (
+            <SidebarGroup>
+                <SidebarGroupLabel>Vendedor</SidebarGroupLabel>
+                <SidebarMenu>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Comisiones">
+                    <Link to="/commissions" onClick={handleLinkClick}>
+                        <DollarSign />
+                        <span>Comisiones</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                </SidebarMenu>
+            </SidebarGroup>
+        ) : (
+            <>
+                {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor') && (
+                <SidebarGroup>
+                    <SidebarGroupLabel>Dashboard</SidebarGroupLabel>
+                    <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Estadísticas">
+                        <Link to="/" onClick={handleLinkClick}>
+                            <BarChart3 />
+                            <span>Estadísticas</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroup>
+                )}
 
+                {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor') && (
+                <SidebarGroup>
+                    <SidebarGroupLabel>Configuración</SidebarGroupLabel>
+                    <SidebarMenu>
+                    {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor') && (
+                        <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Plataformas">
+                            <Link to="/platforms" onClick={handleLinkClick}>
+                            <Puzzle />
+                            <span>Plataformas</span>
+                            </Link>
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    )}
+                    {role === 'super_admin' && (
+                        <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Configuración Global">
+                            <Link to="/global-settings" onClick={handleLinkClick}>
+                            <Settings />
+                            <span>Configuración Global</span>
+                            </Link>
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    )}
+                    {(role === 'super_admin' || role === 'app_super_admin') && (
+                        <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Gestión de Usuarios">
+                            <Link to="/access-management" onClick={handleLinkClick}>
+                            <Users />
+                            <span>Gestión de Usuarios</span>
+                            </Link>
+                        </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    )}
+                    </SidebarMenu>
+                </SidebarGroup>
+                )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Configuración</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Plataformas">
-                <Link to="platforms" relative="path" onClick={handleLinkClick}>
-                  <Puzzle />
-                  <span>Plataformas</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Configuración Global">
-                <Link to="global-settings" relative="path" onClick={handleLinkClick}>
-                  <Settings />
-                  <span>Configuración Global</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Gestión de Usuarios">
-                <Link to="/access-management" onClick={handleLinkClick}>
-                  <Users />
-                  <span>Gestión de Usuarios</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+                {(role === 'super_admin' || role === 'app_super_admin') && (
+                <SidebarGroup>
+                    <SidebarGroupLabel>Monitoreo</SidebarGroupLabel>
+                    <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Alertas del Sistema">
+                        <Link to="/system-alerts" onClick={handleLinkClick}>
+                            <AlertTriangle />
+                            <span>Alertas del Sistema</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Reportes de Errores">
+                        <Link to="/error-reports" onClick={handleLinkClick}>
+                            <Bug />
+                            <span>Reportes de Errores</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Métricas de Rendimiento">
+                        <Link to="/performance-metrics" onClick={handleLinkClick}>
+                            <Activity />
+                            <span>Métricas de Rendimiento</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroup>
+                )}
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Monitoreo</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Alertas del Sistema">
-                <Link to="system-alerts" relative="path" onClick={handleLinkClick}>
-                  <AlertTriangle />
-                  <span>Alertas del Sistema</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Reportes de Errores">
-                <Link to="error-reports" relative="path" onClick={handleLinkClick}>
-                  <Bug />
-                  <span>Reportes de Errores</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Métricas de Rendimiento">
-                <Link to="performance-metrics" relative="path" onClick={handleLinkClick}>
-                  <Activity />
-                  <span>Métricas de Rendimiento</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Avanzado</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild tooltip="Integraciones">
-                <Link to="integrations" relative="path" onClick={handleLinkClick}>
-                  <Globe />
-                  <span>Integraciones</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
-
+                {role === 'super_admin' && (
+                <SidebarGroup>
+                    <SidebarGroupLabel>Avanzado</SidebarGroupLabel>
+                    <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Integraciones">
+                        <Link to="/integrations" onClick={handleLinkClick}>
+                            <Globe />
+                            <span>Integraciones</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    </SidebarMenu>
+                </SidebarGroup>
+                )}
+            </>
+        )}
       </SidebarContent>
       <SidebarFooter>
         <SidebarMenu>

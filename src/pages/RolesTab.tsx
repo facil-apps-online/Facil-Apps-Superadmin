@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { PlatformAssignment } from '@/hooks/usePlatformLevelAssignments';
 import { useUpdateInvestorStake } from '@/hooks/useUpdateInvestorStake';
 import { useRemovePlatformAssignment, useAssignPlatformRole } from '@/hooks/usePlatformLevelAssignments';
 import { useAssignSuperAdminRole } from '@/hooks/useAssignSuperAdminRole';
-import { useAssignVendorRole } from '@/hooks/useAssignVendorRole';
 import { usePlatforms } from '@/hooks/usePlatforms';
-import { useTenants } from '@/hooks/useSuperadminTenants';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +25,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { VendorPlatformCommission, useUpdateVendorPlatformCommission, useRemoveVendorPlatformCommission, useAssignVendorPlatformCommissions } from '@/hooks/useVendorPlatformCommissions';
 
 interface RolesTabProps {
   user: PlatformAssignment;
@@ -36,8 +35,7 @@ type AddAssignmentFormData = {
   role: 'super_admin' | 'app_super_admin' | 'investor' | 'vendor' | '';
   appSuperAdminPlatforms: string[];
   investorPlatforms: { platformId: string; stake: number }[];
-  vendorPlatform: string;
-  vendorTenant: string;
+  vendorPlatforms: { platformId: string; first_payment_commission_rate: number; recurring_payment_commission_rate: number; }[];
 };
 
 // --- Add Assignment Component ---
@@ -50,23 +48,25 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
             role: '',
             appSuperAdminPlatforms: [],
             investorPlatforms: [{ platformId: '', stake: 0 }],
-            vendorPlatform: '',
-            vendorTenant: '',
+            vendorPlatforms: [{ platformId: '', first_payment_commission_rate: 50, recurring_payment_commission_rate: 10 }],
         },
     });
 
-    const { fields, append, remove } = useFieldArray({
+    const { fields: investorFields, append: appendInvestor, remove: removeInvestor } = useFieldArray({
         control,
         name: 'investorPlatforms',
     });
 
+    const { fields: vendorFields, append: appendVendor, remove: removeVendor } = useFieldArray({
+        control,
+        name: 'vendorPlatforms',
+    });
+
     const selectedRole = watch('role');
-    const vendorPlatform = watch('vendorPlatform');
-    const { data: tenants } = useTenants(vendorPlatform);
 
     const assignRoleMutation = useAssignPlatformRole();
     const assignSuperAdminMutation = useAssignSuperAdminRole();
-    const assignVendorMutation = useAssignVendorRole();
+    const assignVendorCommissionsMutation = useAssignVendorPlatformCommissions();
 
     const onSubmit = (data: AddAssignmentFormData) => {
         switch (data.role) {
@@ -77,11 +77,11 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
                 });
                 break;
             case 'vendor':
-                if (!data.vendorTenant) {
-                    toast({ title: 'Error', description: 'Debes seleccionar un tenant.', variant: 'destructive' });
+                if (data.vendorPlatforms.length === 0) {
+                    toast({ title: 'Error', description: 'Debes seleccionar al menos una plataforma.', variant: 'destructive' });
                     return;
                 }
-                assignVendorMutation.mutate({ userId: user.user_id, tenantId: data.vendorTenant }, {
+                assignVendorCommissionsMutation.mutate({ userId: user.user_id, commissions: data.vendorPlatforms }, {
                     onSuccess: () => toast({ title: 'Éxito', description: 'Rol de Vendor asignado.'}),
                     onError: (e) => toast({ title: 'Error', description: `Error: ${e.message}`, variant: 'destructive' }),
                 });
@@ -169,7 +169,7 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
 
                     {selectedRole === 'investor' && (
                         <div className="space-y-4">
-                            {fields.map((item, index) => (
+                            {investorFields.map((item, index) => (
                                 <div key={item.id} className="flex items-center gap-2">
                                     <Controller
                                         control={control}
@@ -183,10 +183,10 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
                                         )}
                                     />
                                     <Input type="number" placeholder="%" {...register(`investorPlatforms.${index}.stake`, { required: true, valueAsNumber: true })} className="w-24"/>
-                                    <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)}><Trash2 className="h-4 w-4" /></Button>
+                                    <Button type="button" variant="destructive" size="icon" onClick={() => removeInvestor(index)}><Trash2 className="h-4 w-4" /></Button>
                                 </div>
                             ))}
-                            <Button type="button" size="sm" variant="outline" onClick={() => append({ platformId: '', stake: 0 })}>
+                            <Button type="button" size="sm" variant="outline" onClick={() => appendInvestor({ platformId: '', stake: 0 })}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Añadir Fila
                             </Button>
                         </div>
@@ -194,22 +194,40 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
 
                     {selectedRole === 'vendor' && (
                         <div className="space-y-4">
-                            <Controller control={control} name="vendorPlatform" render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger><SelectValue placeholder="Selecciona una plataforma" /></SelectTrigger>
-                                    <SelectContent>{platforms?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            )}/>
-                            {vendorPlatform && <Controller control={control} name="vendorTenant" render={({ field }) => (
-                                <Select onValueChange={field.onChange} value={field.value}>
-                                    <SelectTrigger><SelectValue placeholder="Selecciona un tenant" /></SelectTrigger>
-                                    <SelectContent>{tenants?.map(t => <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            )}/>}
+                            {vendorFields.map((item, index) => (
+                                <div key={item.id} className="flex flex-wrap items-end gap-4 p-2 border rounded-md">
+                                    <div className="flex-grow grid gap-1.5 min-w-[150px]">
+                                        <Label>Plataforma</Label>
+                                        <Controller
+                                            control={control}
+                                            name={`vendorPlatforms.${index}.platformId`}
+                                            rules={{ required: true }}
+                                            render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger><SelectValue placeholder="Plataforma" /></SelectTrigger>
+                                                <SelectContent>{platforms?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                                            </Select>
+                                            )}
+                                        />
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label>% 1er Pago</Label>
+                                        <Input type="number" placeholder="% 1er Pago" {...register(`vendorPlatforms.${index}.first_payment_commission_rate`, { required: true, valueAsNumber: true })} className="w-32"/>
+                                    </div>
+                                    <div className="grid gap-1.5">
+                                        <Label>% Recurrente</Label>
+                                        <Input type="number" placeholder="% Recurrente" {...register(`vendorPlatforms.${index}.recurring_payment_commission_rate`, { required: true, valueAsNumber: true })} className="w-32"/>
+                                    </div>
+                                    <Button type="button" variant="destructive" size="icon" onClick={() => removeVendor(index)}><Trash2 className="h-4 w-4" /></Button>
+                                </div>
+                            ))}
+                            <Button type="button" size="sm" variant="outline" onClick={() => appendVendor({ platformId: '', first_payment_commission_rate: 50, recurring_payment_commission_rate: 10 })}>
+                                <PlusCircle className="mr-2 h-4 w-4" /> Añadir Fila
+                            </Button>
                         </div>
                     )}
 
-                    <Button type="submit" className="w-full" disabled={assignRoleMutation.isPending || assignSuperAdminMutation.isPending || assignVendorMutation.isPending}>
+                    <Button type="submit" className="w-full" disabled={assignRoleMutation.isPending || assignSuperAdminMutation.isPending || assignVendorCommissionsMutation.isPending}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Añadir Asignación
                     </Button>
@@ -219,6 +237,78 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
     );
 }
 
+function VendorCommissions({ commissions }: { commissions: VendorPlatformCommission[] }) {
+    const { toast } = useToast();
+    const updateMutation = useUpdateVendorPlatformCommission();
+    const removeMutation = useRemoveVendorPlatformCommission();
+    const [editedCommissions, setEditedCommissions] = useState<Record<string, { first_payment_commission_rate: number; recurring_payment_commission_rate: number }>>({});
+
+    const handleCommissionChange = (id: string, field: string, value: string) => {
+        const numericValue = parseFloat(value) / 100;
+        setEditedCommissions(prev => ({
+            ...prev,
+            [id]: { ...prev[id], [field]: numericValue }
+        }));
+    };
+
+    const handleSave = (commissionId: string) => {
+        const updates = editedCommissions[commissionId];
+        if (!updates) return;
+        updateMutation.mutate({ commissionId, updates }, {
+            onSuccess: () => toast({ title: 'Éxito', description: 'Comisión actualizada.' }),
+            onError: (e) => toast({ title: 'Error', description: `Error: ${e.message}`, variant: 'destructive' }),
+        });
+    };
+
+    const handleRemove = (commissionId: string) => {
+        removeMutation.mutate(commissionId, {
+            onSuccess: () => toast({ title: 'Éxito', description: 'Asignación de vendedor eliminada.' }),
+            onError: (e) => toast({ title: 'Error', description: `Error: ${e.message}`, variant: 'destructive' }),
+        });
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Asignaciones de Vendedor</CardTitle>
+                <CardDescription>Modifica las tasas de comisión o revoca el acceso a una plataforma.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+                {commissions?.map(c => (
+                    <div key={c.id} className="flex flex-col p-2 border rounded-md gap-2">
+                        <div className="font-medium flex-grow">{c.platform_name}</div>
+                        <div className="flex items-center gap-2">
+                            <div className="grid gap-1.5">
+                                <Label>Comisión 1er Pago (%)</Label>
+                                <Input
+                                    type="number"
+                                    value={editedCommissions[c.id]?.first_payment_commission_rate !== undefined ? editedCommissions[c.id].first_payment_commission_rate * 100 : c.first_payment_commission_rate * 100}
+                                    onChange={(e) => handleCommissionChange(c.id, 'first_payment_commission_rate', e.target.value)}
+                                    className="w-32"
+                                />
+                            </div>
+                            <div className="grid gap-1.5">
+                                <Label>Comisión Recurrente (%)</Label>
+                                <Input
+                                    type="number"
+                                    value={editedCommissions[c.id]?.recurring_payment_commission_rate !== undefined ? editedCommissions[c.id].recurring_payment_commission_rate * 100 : c.recurring_payment_commission_rate * 100}
+                                    onChange={(e) => handleCommissionChange(c.id, 'recurring_payment_commission_rate', e.target.value)}
+                                    className="w-32"
+                                />
+                            </div>
+                            <Button size="icon" variant="ghost" onClick={() => handleSave(c.id)} disabled={updateMutation.isPending}>
+                                <Save className="h-4 w-4" />
+                            </Button>
+                            <Button size="icon" variant="outline" onClick={() => handleRemove(c.id)} disabled={removeMutation.isPending}>
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                        </div>
+                    </div>
+                ))}
+            </CardContent>
+        </Card>
+    );
+}
 
 export function RolesTab({ user }: RolesTabProps) {
   const { toast } = useToast();
@@ -265,7 +355,7 @@ export function RolesTab({ user }: RolesTabProps) {
     });
   };
 
-  const hasAssignments = (user.platform_roles?.investor?.length || 0) > 0 || (user.platform_roles?.app_super_admin?.length || 0) > 0;
+  const hasAssignments = (user.platform_roles?.investor?.length || 0) > 0 || (user.platform_roles?.app_super_admin?.length || 0) > 0 || (user.platform_roles?.vendor?.length || 0) > 0;
 
   return (
     <div className="space-y-6 py-4">
@@ -323,6 +413,10 @@ export function RolesTab({ user }: RolesTabProps) {
             ))}
           </CardContent>
         </Card>
+      )}
+
+      {user.platform_roles?.vendor && user.platform_roles.vendor.length > 0 && (
+        <VendorCommissions commissions={user.platform_roles.vendor} />
       )}
 
       <AddAssignment user={user} />

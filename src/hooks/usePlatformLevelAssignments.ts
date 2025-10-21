@@ -12,6 +12,13 @@ export interface PlatformAssignment {
   platform_roles: {
     app_super_admin?: { platform_id: string; platform_name: string; }[];
     investor?: { platform_id: string; platform_name: string; stake_percentage: number; }[];
+    vendor?: { 
+        id: string;
+        platform_id: string; 
+        platform_name: string;
+        first_payment_commission_rate: number;
+        recurring_payment_commission_rate: number;
+    }[];
   };
 }
 

@@ -25,7 +25,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import { useDebounce } from '@/hooks/useDebounce';
-import { PlusCircle, Edit, Trash2, BookKey, Package, Settings, Search, Users } from 'lucide-react';
+import { PlusCircle, Edit, Trash2, BookKey, Package, Settings, Search, Users, BarChart3 } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments';
 
 interface Platform {
   id: string;
@@ -38,15 +40,32 @@ export default function PlatformsList() {
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
   const { data: platforms, isLoading, isError, error } = usePlatforms(debouncedSearchTerm);
+  const { user, currentAssignment } = useAuth();
+  const { data: allAssignments } = usePlatformLevelAssignments();
+  const role = currentAssignment?.role;
   
   const navigate = useNavigate();
   const { toast } = useToast();
   const [deleteAlert, setDeleteAlert] = useState<{ isOpen: boolean; platformId: string | null; platformName: string | null }>({ isOpen: false, platformId: null, platformName: null });
 
+  const platformIds = useMemo(() => {
+    if (!user || !allAssignments) return [];
+    const currentUserAssignments = allAssignments?.find(a => a.user_id === user?.id);
+    if (!currentUserAssignments) return [];
+
+    return [
+      ...(currentUserAssignments?.platform_roles?.app_super_admin?.map(p => p.platform_id) || []),
+      ...(currentUserAssignments?.platform_roles?.investor?.map(p => p.platform_id) || [])
+    ];
+  }, [user, allAssignments]);
+
   const sortedPlatforms = useMemo(() => {
     if (!platforms) return [];
-    return [...platforms].sort((a, b) => a.name.localeCompare(b.name));
-  }, [platforms]);
+    const filtered = role === 'super_admin' 
+      ? platforms 
+      : platforms.filter(p => platformIds.includes(p.id));
+    return [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  }, [platforms, role, platformIds]);
 
   const handleDeleteRequest = (platformId: string, platformName: string) => {
     setDeleteAlert({ isOpen: true, platformId, platformName });
@@ -61,8 +80,6 @@ export default function PlatformsList() {
 
       if (error) throw new Error(error.message);
 
-      // This part needs to be handled by react-query's invalidation, but for now we'll keep it simple
-      // The list will automatically refetch due to the query key changing if we were to implement it fully
       toast({
         title: "Plataforma eliminada",
         description: `La plataforma "${deleteAlert.platformName}" ha sido eliminada exitosamente.`,
@@ -82,12 +99,14 @@ export default function PlatformsList() {
     <div className="w-full space-y-6">
       <div className="flex justify-between items-center mb-4">
         <h1 className="text-2xl font-bold">Gestión de Plataformas</h1>
-        <Button asChild>
-          <Link to="/platforms/create">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Crear Plataforma
-          </Link>
-        </Button>
+        {role === 'super_admin' && (
+          <Button asChild>
+            <Link to="/platforms/create">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Crear Plataforma
+            </Link>
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-col md:flex-row gap-4 mb-6">
@@ -127,53 +146,71 @@ export default function PlatformsList() {
                     <TableCell>{platform.base_url || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => navigate(`/platforms/${platform.id}/settings`)}
-                          title="Configuración de la Plataforma"
-                        >
-                          <Settings className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => navigate(`/platforms/${platform.id}/plans`)}
-                          title="Gestionar Planes"
-                        >
-                          <BookKey className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => navigate(`/platforms/${platform.id}/assets`)}
-                          title="Catálogo de Activos"
-                        >
-                          <Package className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => navigate(`/platforms/${platform.id}/tenants`)}
-                          title="Ver Tenants"
-                        >
-                          <Users className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          size="icon" 
-                          onClick={() => navigate(`/platforms/edit/${platform.id}`)}
-                          title="Editar Plataforma"
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="destructive" size="icon" title="Eliminar Plataforma" onClick={() => handleDeleteRequest(platform.id, platform.name)}>
-                              <Trash2 className="h-4 w-4" />
+                        {role === 'investor' ? (
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => navigate(`/platforms/${platform.id}/dashboard`)}
+                                title="Ver Dashboard Financiero"
+                            >
+                                <BarChart3 className="h-4 w-4 mr-2" />
+                                Dashboard
                             </Button>
-                          </AlertDialogTrigger>
-                        </AlertDialog>
+                        ) : (
+                            <>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => navigate(`/platforms/${platform.id}/settings`)}
+                                  title="Configuración de la Plataforma"
+                                >
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => navigate(`/platforms/${platform.id}/plans`)}
+                                  title="Gestionar Planes"
+                                >
+                                  <BookKey className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => navigate(`/platforms/${platform.id}/assets`)}
+                                  title="Catálogo de Activos"
+                                >
+                                  <Package className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="icon" 
+                                  onClick={() => navigate(`/platforms/${platform.id}/tenants`)}
+                                  title="Ver Tenants"
+                                >
+                                  <Users className="h-4 w-4" />
+                                </Button>
+                                {role === 'super_admin' && (
+                                  <>
+                                    <Button 
+                                      variant="outline" 
+                                      size="icon" 
+                                      onClick={() => navigate(`/platforms/edit/${platform.id}`)}
+                                      title="Editar Plataforma"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="icon" title="Eliminar Plataforma" onClick={() => handleDeleteRequest(platform.id, platform.name)}>
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                    </AlertDialog>
+                                  </>
+                                )}
+                            </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
