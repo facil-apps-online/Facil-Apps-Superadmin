@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 interface SystemAlert {
   id: string;
@@ -14,10 +14,7 @@ interface SystemAlert {
   resolved_by: string | null;
 }
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 // Use the regular supabase client for all interactions, relying on RLS for authorization
 
 const SystemAlerts: React.FC = () => {

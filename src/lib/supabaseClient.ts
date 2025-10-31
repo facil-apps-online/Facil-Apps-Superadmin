@@ -1,8 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/integrations/supabase/types';
 
-const SUPABASE_URL = 'https://vtfsbogpkrcbfuhhoepf.supabase.co';
-const SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ0ZnNib2dwa3JjYmZ1aGhvZXBmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAyODU0NjQsImV4cCI6MjA2NTg2MTQ2NH0.qy5Depk1nfahqIO6Ixwf2FeLqrxfghYDEWAy43cwQe8';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
 // Throw an error if the environment variables are not set.
 if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
