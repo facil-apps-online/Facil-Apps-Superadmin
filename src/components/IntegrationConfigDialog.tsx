@@ -13,12 +13,13 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
+import { ConfigField } from '@/hooks/useIntegrationProviders';
 
 interface IntegrationProvider {
   id: string;
   name: string;
   slug: string;
-  config_schema: any[];
+  config_schema: ConfigField[];
 }
 
 interface IntegrationConfigDialogProps {

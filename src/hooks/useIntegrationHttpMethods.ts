@@ -8,10 +8,9 @@ export interface IntegrationHttpMethod {
 }
 
 const fetchIntegrationHttpMethods = async (): Promise<IntegrationHttpMethod[]> => {
-  const { data, error } = await supabase
-    .from('integration_http_methods')
-    .select('*')
-    .order('method', { ascending: true });
+  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    body: { action: 'get_integration_http_methods' },
+  });
 
   if (error) {
     throw new Error(error.message);

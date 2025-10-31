@@ -1,9 +1,15 @@
 import React, { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Edit } from 'lucide-react';
-import { useIntegrationProviders, IntegrationProvider } from '@/hooks/useIntegrationProviders';
-import { useCountries, Country } from '@/hooks/useCountries';
-import { useIntegrationCategories, IntegrationCategory } from '@/hooks/useIntegrationCategories';
+import { useGlobalIntegrations, IntegrationProvider, GlobalIntegrationsData } from '@/hooks/useGlobalIntegrations';
+
+export interface IntegrationCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from 'react-router-dom';
@@ -136,14 +142,12 @@ const IntegrationsDesktopView = ({ countriesWithProviders, providersByCountry, c
 // --- Main Page Component ---
 
 export default function IntegrationsPage() {
-  const { data: providers, isLoading: isLoadingProviders, error: errorProviders } = useIntegrationProviders();
-  const { data: countries, isLoading: isLoadingCountries, error: errorCountries } = useCountries();
-  const { data: categories, isLoading: isLoadingCategories, error: errorCategories } = useIntegrationCategories();
+  const { data, isLoading, error } = useGlobalIntegrations();
+  const { providers, countries, categories } = (data as GlobalIntegrationsData) || {};
   const navigate = useNavigate();
   const screenSize = useScreenSize();
 
-  const isLoading = isLoadingProviders || isLoadingCountries || isLoadingCategories;
-  const error = errorProviders || errorCountries || errorCategories;
+
 
   const providersByCountry = useMemo(() => {
     if (!providers) return {};

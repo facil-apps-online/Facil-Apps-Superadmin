@@ -18,7 +18,7 @@ import SetupSuperadmin from '../pages/SetupSuperadmin';
 import Integrations from '../Integrations';
 import SystemAlerts from '../SystemAlerts';
 import ErrorReports from '../ErrorReports';
-import PerformanceMetrics from '../PerformanceMetrics';
+import PerformanceMetrics from '../pages/PerformanceMetrics';
 import AccessManagementPage from '../pages/AccessManagement/index';
 import UserManagementPage from '../pages/UserManagementPage';
 import TranslationAdmin from '@/components/TranslationAdmin';

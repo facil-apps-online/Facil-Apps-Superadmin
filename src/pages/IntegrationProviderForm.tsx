@@ -7,8 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useIntegrationProvider, useUpsertIntegrationProvider, IntegrationProvider, ConfigField, ApiSchemaNode, HttpHeader } from '@/hooks/useIntegrationProviders';
-import { useCountries } from '@/hooks/useCountries';
-import { useIntegrationCategories } from '@/hooks/useIntegrationCategories';
+import { useGlobalIntegrations } from '@/hooks/useGlobalIntegrations';
 import { useIntegrationHttpMethods } from '@/hooks/useIntegrationHttpMethods';
 import { useIntegrationBodyFormats } from '@/hooks/useIntegrationBodyFormats';
 import { useIntegrationAuthMethods } from '@/hooks/useIntegrationAuthMethods';
@@ -67,8 +66,8 @@ export default function IntegrationProviderForm() {
   const isEditing = Boolean(id);
 
   const { data: providerToEdit, isLoading: isLoadingProvider } = useIntegrationProvider(id);
-  const { data: countries, isLoading: isLoadingCountries } = useCountries();
-  const { data: categories, isLoading: isLoadingCategories } = useIntegrationCategories();
+  const { data: globalData, isLoading: isLoadingGlobalData } = useGlobalIntegrations();
+  const { countries, categories } = globalData || {};
   const { data: httpMethods, isLoading: isLoadingHttpMethods } = useIntegrationHttpMethods();
   const { data: bodyFormats, isLoading: isLoadingBodyFormats } = useIntegrationBodyFormats();
   const { data: authMethods, isLoading: isLoadingAuthMethods } = useIntegrationAuthMethods();
@@ -85,31 +84,31 @@ export default function IntegrationProviderForm() {
   const selectedBodyFormat = useMemo(() => bodyFormats?.find(f => f.id === provider.body_format_id), [bodyFormats, provider.body_format_id]);
   const selectedAuthMethod = useMemo(() => authMethods?.find(m => m.id === provider.auth_method_id), [authMethods, provider.auth_method_id]);
 
-  const handleFieldChange = (field: keyof IntegrationProvider, value: any) => {
+  const handleFieldChange = (field: keyof IntegrationProvider, value: unknown) => {
     setProvider(prev => {
       const newState = { ...prev, [field]: value };
-      if (field === 'name' && !slugManuallyEdited && !isEditing) newState.slug = slugify(value);
+      if (field === 'name' && !slugManuallyEdited && !isEditing) newState.slug = slugify(value as string);
       if (field === 'slug') setSlugManuallyEdited(true);
       return newState;
     });
   };
   
   const handleEndpointChange = (env: 'test' | 'production', value: string) => setProvider(prev => ({ ...prev, endpoints: { ...prev.endpoints, [env]: value } }));
-  const handleConfigSchemaChange = (index: number, field: keyof ConfigField, value: any) => { const newSchema = [...(provider.configSchema || [])]; newSchema[index] = { ...newSchema[index], [field]: value }; setProvider(prev => ({ ...prev, configSchema: newSchema })); };
+  const handleConfigSchemaChange = (index: number, field: keyof ConfigField, value: unknown) => { const newSchema = [...(provider.configSchema || [])]; newSchema[index] = { ...newSchema[index], [field]: value }; setProvider(prev => ({ ...prev, configSchema: newSchema })); };
   const addConfigField = () => { const newField: ConfigField = { id: `temp-${Date.now()}`, name: '', label: '', type: 'text', required: false, helpText: '', sandboxValue: '' }; setProvider(prev => ({ ...prev, configSchema: [...(prev.configSchema || []), newField] })); };
   const removeConfigField = (index: number) => { const newSchema = [...(provider.configSchema || [])]; newSchema.splice(index, 1); setProvider(prev => ({ ...prev, configSchema: newSchema })); };
   const moveConfigField = (index: number, direction: 'up' | 'down') => { const newSchema = [...(provider.configSchema || [])]; const newIndex = direction === 'up' ? index - 1 : index + 1; if (newIndex < 0 || newIndex >= newSchema.length) return; const [movedItem] = newSchema.splice(index, 1); newSchema.splice(newIndex, 0, movedItem); setProvider(prev => ({ ...prev, configSchema: newSchema })); };
   
-  const handleHeaderChange = (index: number, field: keyof HttpHeader, value: any) => { const newHeaders = [...(provider.http_headers || [])]; newHeaders[index] = { ...newHeaders[index], [field]: value }; setProvider(prev => ({ ...prev, http_headers: newHeaders })); };
-  const addHttpHeader = () => { const newHeader: HttpHeader = { id: `temp-${Date.now()}`, name: '', value: '' }; setProvider(prev => ({ ...prev, http_headers: [...(prev.http_headers || []), newHeader] })); };
+  const handleHeaderChange = (index: number, field: keyof HttpHeader, value: unknown) => { const newHeaders = [...(provider.http_headers || [])]; newHeaders[index] = { ...newHeaders[index], [field]: value }; setProvider(prev => ({ ...prev, http_headers: newHeaders })); };
+  const addHttpHeader = () => { const newHeader: HttpHeader = { id: `temp-${Date.Now()}`, name: '', value: '' }; setProvider(prev => ({ ...prev, http_headers: [...(prev.http_headers || []), newHeader] })); };
   const removeHttpHeader = (index: number) => { const newHeaders = [...(provider.http_headers || [])]; newHeaders.splice(index, 1); setProvider(prev => ({ ...prev, http_headers: newHeaders })); };
 
-  const handleAuthFieldChange = (key: string, value: any) => setProvider(prev => ({ ...prev, authentication_config: { ...prev.authentication_config, [key]: value } }));
+  const handleAuthFieldChange = (key: string, value: unknown) => setProvider(prev => ({ ...prev, authentication_config: { ...prev.authentication_config, [key]: value } }));
 
-  const updateNestedNode = (nodes: ApiSchemaNode[], path: number[], field: keyof ApiSchemaNode, value: any): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; if (newPath.length === 0) return { ...node, [field]: value }; return { ...node, children: updateNestedNode(node.children || [], newPath, field, value) }; }); };
+  const updateNestedNode = (nodes: ApiSchemaNode[], path: number[], field: keyof ApiSchemaNode, value: unknown): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; if (newPath.length === 0) return { ...node, [field]: value }; return { ...node, children: updateNestedNode(node.children || [], newPath, field, value) }; }); };
   const addNestedNode = (nodes: ApiSchemaNode[], path: number[]): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); return nodes.map((node, i) => { if (i !== index) return node; const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', systemMap: '' }; if (newPath.length === 0) return { ...node, children: [...(node.children || []), newNode] }; return { ...node, children: addNestedNode(node.children || [], newPath) }; }); };
   const removeNestedNode = (nodes: ApiSchemaNode[], path: number[]): ApiSchemaNode[] => { const index = path[0]; const newPath = path.slice(1); if (newPath.length === 0) return nodes.filter((_, i) => i !== index); return nodes.map((node, i) => { if (i !== index) return node; return { ...node, children: removeNestedNode(node.children || [], newPath) }; }); };
-  const handleSchemaNodeChange = (path: number[], field: keyof ApiSchemaNode, value: any) => setProvider(prev => ({ ...prev, apiSchema: updateNestedNode(prev.apiSchema || [], path, field, value) }));
+  const handleSchemaNodeChange = (path: number[], field: keyof ApiSchemaNode, value: unknown) => setProvider(prev => ({ ...prev, apiSchema: updateNestedNode(prev.apiSchema || [], path, field, value) }));
   const handleAddSchemaNode = (path: number[]) => setProvider(prev => ({ ...prev, apiSchema: addNestedNode(prev.apiSchema || [], path) }));
   const handleRemoveSchemaNode = (path: number[]) => setProvider(prev => ({ ...prev, apiSchema: removeNestedNode(prev.apiSchema || [], path) }));
   const addRootSchemaNode = () => { const newNode: ApiSchemaNode = { id: `temp-${Date.now()}`, key: '', type: 'string', systemMap: '' }; setProvider(prev => ({ ...prev, apiSchema: [...(prev.apiSchema || []), newNode] })); };
@@ -142,7 +141,7 @@ export default function IntegrationProviderForm() {
 
   const handleSubmit = (e: React.FormEvent) => { e.preventDefault(); mutation.mutate(provider); };
 
-  const isLoading = isLoadingProvider || isLoadingCountries || isLoadingCategories || isLoadingHttpMethods || isLoadingBodyFormats || isLoadingAuthMethods;
+  const isLoading = isLoadingProvider || isLoadingGlobalData || isLoadingHttpMethods || isLoadingBodyFormats || isLoadingAuthMethods;
   if (isLoading) return <p>Cargando formulario...</p>;
 
   return (

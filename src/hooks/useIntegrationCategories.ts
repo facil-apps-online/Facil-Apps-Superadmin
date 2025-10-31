@@ -9,71 +9,62 @@ export interface IntegrationCategory {
   description?: string;
 }
 
-// Hook para obtener todas las categorías (usando .from())
 export const useIntegrationCategories = () => {
   return useQuery<IntegrationCategory[], Error>({
     queryKey: ['integrationCategories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('integration_categories')
-        .select('*')
-        .order('name');
+      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+        body: { action: 'get_integration_categories' },
+      });
       if (error) throw new Error(error.message);
       return data;
     },
   });
 };
 
-// Hook para crear/actualizar una categoría (usando .upsert())
 export const useUpsertIntegrationCategory = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (category: Partial<IntegrationCategory>) => {
-      const { data, error } = await supabase
-        .from('integration_categories')
-        .upsert(category)
-        .select();
-      
+      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+        body: { action: 'upsert_integration_category', payload: { category } },
+      });
+
       if (error) throw new Error(error.message);
       return data;
     },
     onSuccess: (data, variables) => {
       toast({ title: `Categoría ${variables.id ? 'actualizada' : 'creada'} con éxito.` });
       queryClient.invalidateQueries({ queryKey: ['integrationCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['globalIntegrations'] });
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({ title: 'Error al guardar la categoría', description: error.message, variant: 'destructive' });
     },
   });
 };
 
-// Hook para eliminar una categoría (usando .delete())
 export const useDeleteIntegrationCategory = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
-        .from('integration_categories')
-        .delete()
-        .eq('id', id);
+      const { error } = await supabase.functions.invoke('superadmin-actions', {
+        body: { action: 'delete_integration_category', payload: { id } },
+      });
 
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
       toast({ title: 'Categoría eliminada con éxito.' });
       queryClient.invalidateQueries({ queryKey: ['integrationCategories'] });
+      queryClient.invalidateQueries({ queryKey: ['globalIntegrations'] });
     },
     onError: (error) => {
-      // Personalizamos el mensaje de error para el caso de llave foránea
-      if (error.message.includes('violates foreign key constraint')) {
-        toast({ title: 'Error al eliminar', description: 'No se puede eliminar la categoría porque está siendo utilizada por uno o más proveedores.', variant: 'destructive' });
-      } else {
-        toast({ title: 'Error al eliminar', description: error.message, variant: 'destructive' });
-      }
+      toast({ title: 'Error al eliminar la categoría', description: error.message, variant: 'destructive' });
     },
   });
 };

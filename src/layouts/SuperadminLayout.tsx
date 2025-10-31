@@ -34,6 +34,7 @@ function MainContent() {
 }
 
 export function SuperadminLayout() {
+  console.log('SuperadminLayout: rendered');
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-gray-50">

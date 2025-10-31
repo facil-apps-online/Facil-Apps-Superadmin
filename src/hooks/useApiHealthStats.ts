@@ -4,6 +4,13 @@ import { supabase } from '@/lib/supabaseClient';
 export interface ApiHealthStats {
   avg_latency_ms: number;
   error_rate_percentage: number;
+  high_latency_requests: number;
+  high_latency_list: {
+    path: string;
+    total: number;
+    avg_latency: number;
+    max_latency: number;
+  }[];
   requests_per_minute: {
     time_bucket: string;
     request_count: number;
@@ -11,7 +18,9 @@ export interface ApiHealthStats {
 }
 
 const fetchApiHealthStats = async (): Promise<ApiHealthStats> => {
-  const { data, error } = await supabase.rpc('get_api_health_stats');
+  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    body: { action: 'get_api_health_stats' },
+  });
 
   if (error) {
     throw new Error(`Error fetching API health stats: ${error.message}`);

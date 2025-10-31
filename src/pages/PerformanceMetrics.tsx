@@ -6,6 +6,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, Activity, AlertCircle, BarChart, HardDrive, MemoryStick, Cpu } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { format } from 'date-fns';
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const StatCard = ({ title, value, unit, description, icon, isLoading }) => (
   <Card>
@@ -45,6 +54,8 @@ const ChartCard = ({ title, description, children, isLoading }) => (
 export default function PerformanceMetrics() {
   const { data: apiStats, isLoading: isLoadingApi, isError: isErrorApi, error: errorApi } = useApiHealthStats();
   const { data: serverStats, isLoading: isLoadingServer, isError: isErrorServer, error: errorServer } = useServerHealthStats();
+  const [page, setPage] = React.useState(1);
+  const itemsPerPage = 5;
 
   const formattedRpmData = React.useMemo(() => {
     return apiStats?.requests_per_minute.map(d => ({
@@ -52,6 +63,14 @@ export default function PerformanceMetrics() {
       time_bucket: format(new Date(d.time_bucket), 'HH:mm'),
     })) || [];
   }, [apiStats]);
+
+  const paginatedHighLatencyList = React.useMemo(() => {
+    if (!apiStats?.high_latency_list) return [];
+    const startIndex = (page - 1) * itemsPerPage;
+    return apiStats.high_latency_list.slice(startIndex, startIndex + itemsPerPage);
+  }, [apiStats, page]);
+
+  const totalPages = Math.ceil((apiStats?.high_latency_list?.length || 0) / itemsPerPage);
 
   const isError = isErrorApi || isErrorServer;
   const error = errorApi || errorServer;
@@ -74,13 +93,21 @@ export default function PerformanceMetrics() {
         <h2 className="text-xl font-bold">Salud de la Base de Datos</h2>
         <p className="text-muted-foreground">Datos de los últimos 60 minutos. Se actualiza automáticamente.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Latencia Promedio"
           value={apiStats?.avg_latency_ms.toFixed(0) ?? '...'}
           unit="ms"
           description="Tiempo de respuesta de la API."
           icon={<Activity className="h-4 w-4 text-muted-foreground" />}
+          isLoading={isLoadingApi}
+        />
+        <StatCard
+          title="Peticiones > 1s"
+          value={apiStats?.high_latency_requests ?? '...'}
+          unit="reqs"
+          description="Consultas con latencia superior a 1000 ms en el último mes."
+          icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
           isLoading={isLoadingApi}
         />
         <StatCard
@@ -124,6 +151,66 @@ export default function PerformanceMetrics() {
         </ChartCard>
       </div>
 
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="col-span-1 lg:col-span-3">
+          <CardHeader>
+            <CardTitle>Peticiones con Alta Latencia</CardTitle>
+            <CardDescription>
+              Lista de las peticiones más lentas en el último mes, agrupadas por acción.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingApi ? (
+              <Skeleton className="h-[300px] w-full" />
+            ) : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Acción</TableHead>
+                      <TableHead className="text-right">Total Peticiones</TableHead>
+                      <TableHead className="text-right">Latencia Promedio (ms)</TableHead>
+                      <TableHead className="text-right">Latencia Máxima (ms)</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedHighLatencyList.map((req, index) => (
+                      <TableRow key={index}>
+                        <TableCell className="font-mono text-sm">{req.path}</TableCell>
+                        <TableCell className="text-right">{req.total}</TableCell>
+                        <TableCell className="text-right">{req.avg_latency.toFixed(0)}</TableCell>
+                        <TableCell className="text-right">{req.max_latency}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <div className="flex items-center justify-end space-x-2 py-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-sm">
+                    Página {page} de {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                  >
+                    Siguiente
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Server Health Section */}
       <div className="pt-4">
         <h2 className="text-xl font-bold">Salud de la Infraestructura (Servidor)</h2>
@@ -160,4 +247,3 @@ export default function PerformanceMetrics() {
     </div>
   );
 }
-

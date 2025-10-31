@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
+import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
 
 // --- Interfaces ---
 // Esta interfaz define la estructura de datos que el componente espera.
@@ -65,10 +66,12 @@ const assignPlatformRole = async (payload: AssignRolePayload): Promise<any> => {
 
 export const useAssignPlatformRole = () => {
   const queryClient = useQueryClient();
+  const { refreshUser } = useAuth(); // Import useAuth
   return useMutation<any, Error, AssignRolePayload>({
     mutationFn: assignPlatformRole,
-    onSuccess: () => {
+    onSuccess: async () => { // Make async
       queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
+      await refreshUser(); // Refresh user session
     },
   });
 };
@@ -80,10 +83,12 @@ const removePlatformAssignment = async (payload: RemoveAssignmentPayload): Promi
 
 export const useRemovePlatformAssignment = () => {
   const queryClient = useQueryClient();
+  const { refreshUser } = useAuth(); // Import useAuth
   return useMutation<any, Error, RemoveAssignmentPayload>({
     mutationFn: removePlatformAssignment,
-    onSuccess: () => {
+    onSuccess: async () => { // Make async
       queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
+      await refreshUser(); // Refresh user session
     },
   });
 };

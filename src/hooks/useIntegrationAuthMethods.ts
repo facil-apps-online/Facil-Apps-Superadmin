@@ -5,14 +5,13 @@ export interface IntegrationAuthMethod {
   id: string;
   method: string;
   description?: string;
-  config_schema?: any;
+  config_schema?: Record<string, unknown>;
 }
 
 const fetchIntegrationAuthMethods = async (): Promise<IntegrationAuthMethod[]> => {
-  const { data, error } = await supabase
-    .from('integration_auth_methods')
-    .select('*')
-    .order('method', { ascending: true });
+  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    body: { action: 'get_integration_auth_methods' },
+  });
 
   if (error) {
     throw new Error(error.message);

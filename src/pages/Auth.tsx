@@ -62,12 +62,9 @@ const AuthPage: React.FC = () => {
         description: "Bienvenido de nuevo.",
       });
 
-      // Redirección basada en el rol devuelto
-      if (role === 'super_admin') {
-        navigate('/');
-      } else {
-        navigate('/'); // Redirección por defecto para otros roles
-      }
+      // Después de un inicio de sesión exitoso, navegar a la raíz.
+      // ProtectedRoute se encargará de la redirección basada en roles.
+      navigate('/');
 
     } catch (error: any) {
       toast({

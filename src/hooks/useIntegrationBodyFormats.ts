@@ -8,10 +8,9 @@ export interface IntegrationBodyFormat {
 }
 
 const fetchIntegrationBodyFormats = async (): Promise<IntegrationBodyFormat[]> => {
-  const { data, error } = await supabase
-    .from('integration_body_formats')
-    .select('*')
-    .order('format', { ascending: true });
+  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    body: { action: 'get_integration_body_formats' },
+  });
 
   if (error) {
     throw new Error(error.message);

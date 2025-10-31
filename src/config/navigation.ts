@@ -82,12 +82,7 @@ export const superadminNavigationConfig = [
         icon: ShieldAlert,
         roles: ['super_admin']
       },
-      {
-        title: "Reportes de Errores",
-        url: "/error-reports",
-        icon: FileText,
-        roles: ['super_admin']
-      },
+
       {
         title: "Métricas de Rendimiento",
         url: "/performance-metrics",

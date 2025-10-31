@@ -16,7 +16,7 @@ import SystemCatalogs from '@/pages/SystemCatalogs';
 import IntegrationsPage from '@/pages/Integrations';
 import { LocalizationsSettings } from '@/components/settings/LocalizationsSettings';
 import SystemAlerts from '@/pages/SystemAlerts';
-import ErrorReports from '@/pages/ErrorReports';
+
 import PerformanceMetrics from '@/pages/PerformanceMetrics';
 import { SuperadminLayout } from '@/layouts/SuperadminLayout';
 import { Layout } from '@/components/Layout';
@@ -33,6 +33,7 @@ import TenantDetails from '@/pages/TenantDetails';
 import GlobalSettings from '@/pages/Settings/GlobalSettings';
 import VendorDashboard from '@/pages/VendorDashboard';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
+import InvestorDashboard from '@/pages/InvestorDashboard';
 
 
 // --- Asumo que estas páginas existen o las crearás ---
@@ -56,6 +57,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route element={<SuperadminLayout />}>
                 <Route path="/" element={<SuperadminStats />} />
+                <Route path="/dashboard" element={<InvestorDashboard />} />
 
                 <Route path="/tenants/:tenantId/edit" element={<EditTenant />} />
                 <Route path="/tenants/:tenantId" element={<TenantDetails />} />
@@ -76,7 +78,7 @@ function App() {
                 <Route path="/integrations/edit/:id" element={<IntegrationProviderForm />} />
                 <Route path="/translations" element={<LocalizationsSettings />} />
                 <Route path="/system-alerts" element={<SystemAlerts />} />
-                <Route path="/error-reports" element={<ErrorReports />} />
+
                 <Route path="/performance-metrics" element={<PerformanceMetrics />} />
                 {/* Rutas de configuración movidas a un nivel superior o eliminadas */}
                 {/* <Route path="/subscription-plans" element={<SubscriptionPlans />} /> */}

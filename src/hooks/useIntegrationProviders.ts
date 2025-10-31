@@ -44,87 +44,89 @@ export interface IntegrationProvider {
   body_format_id?: string;
   auth_method_id?: string;
   http_headers?: HttpHeader[];
-  authentication_config?: any;
+  authentication_config?: Record<string, unknown>;
   body_template?: string;
-  response_mapping?: any;
+  response_mapping?: Record<string, unknown>;
 }
 
 // --- Hooks ---
 
-// Hook para obtener todos los proveedores
-export const useIntegrationProviders = () => {
-  return useQuery<IntegrationProvider[], Error>({
-    queryKey: ['integrationProviders'],
+// Hook para obtener un proveedor por ID
+
+export const useIntegrationProvider = (id: string | undefined) => {
+
+  return useQuery<IntegrationProvider | undefined, Error>({
+
+    queryKey: ['integrationProvider', id],
+
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('integration_providers')
-        .select('*')
-        .order('name');
+
+      if (!id) return undefined;
+
+      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+
+        body: { action: 'get_integration_provider', payload: { id } },
+
+      });
+
       if (error) throw new Error(error.message);
-      // Mapeo para asegurar que los campos JSONB se parseen correctamente si es necesario
-      return data.map(p => ({
-        ...p,
-        configSchema: p.config_schema,
-        apiSchema: p.api_schema,
-      })) as IntegrationProvider[];
+
+      return data as IntegrationProvider;
+
     },
+
+    enabled: !!id,
+
   });
+
 };
 
-// Hook para obtener un proveedor por ID
-export const useIntegrationProvider = (id: string | undefined) => {
-  return useQuery<IntegrationProvider | undefined, Error>({
-    queryKey: ['integrationProvider', id],
-    queryFn: async () => {
-      if (!id) return undefined;
-      const { data, error } = await supabase
-        .from('integration_providers')
-        .select('*')
-        .eq('id', id)
-        .single();
-      if (error) throw new Error(error.message);
-      if (!data) return undefined;
-      return {
-        ...data,
-        configSchema: data.config_schema,
-        apiSchema: data.api_schema,
-      } as IntegrationProvider;
-    },
-    enabled: !!id,
-  });
-};
+
 
 // Hook para crear/actualizar un proveedor
+
 export const useUpsertIntegrationProvider = () => {
+
   const queryClient = useQueryClient();
+
   const { toast } = useToast();
 
-  return useMutation({
-    mutationFn: async (provider: Partial<IntegrationProvider>) => {
-      // Mapeamos los nombres del frontend a los de la DB si es necesario
-      const { configSchema, apiSchema, ...rest } = provider;
-      const providerToSave = {
-        ...rest,
-        config_schema: configSchema,
-        api_schema: apiSchema,
-      };
 
-      const { data, error } = await supabase
-        .from('integration_providers')
-        .upsert(providerToSave)
-        .select()
-        .single();
+
+  return useMutation({
+
+    mutationFn: async (provider: Partial<IntegrationProvider>) => {
+
+      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+
+        body: { action: 'upsert_integration_provider', payload: { provider } },
+
+      });
+
+
 
       if (error) throw new Error(error.message);
+
       return data;
+
     },
+
     onSuccess: (data, variables) => {
+
       toast({ title: `Proveedor ${variables.id ? 'actualizado' : 'creado'} con éxito.` });
-      queryClient.invalidateQueries({ queryKey: ['integrationProviders'] });
+
+      queryClient.invalidateQueries({ queryKey: ['globalIntegrations'] });
+
       queryClient.invalidateQueries({ queryKey: ['integrationProvider', data.id] });
+
     },
+
     onError: (error) => {
+
       toast({ title: 'Error al guardar', description: error.message, variant: 'destructive' });
+
     },
+
   });
+
 };

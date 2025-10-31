@@ -16,14 +16,16 @@ interface UserProfile {
 }
 
 export interface UserAssignment {
-  assignment_id: string;
-  tenant_id: string;
-  tenant_name: string;
-  role_id: string;
+  assignment_id?: string;
+  tenant_id?: string;
+  tenant_name?: string;
+  role_id?: string;
   role: string;
-  branch_id: string | null;
-  branch_name: string | null;
+  branch_id?: string | null;
+  branch_name?: string | null;
   status: 'active' | 'inactive';
+  platform_id?: string;
+  stake_percentage?: number;
 }
 
 interface AuthContextType {
@@ -36,6 +38,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   switchAssignment: (assignmentId: string) => Promise<void>;
+  switchCurrentAssignment: (assignment: UserAssignment) => void;
   refreshUser: () => Promise<void>;
   loading: boolean;
 }
@@ -71,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
       setProfile(userProfile);
 
       if (app_metadata.assignments && Array.isArray(app_metadata.assignments) && app_metadata.assignments.length > 0) {
+        console.log("AuthContext: User has assignments:", app_metadata.assignments);
         const allAssignments: UserAssignment[] = app_metadata.assignments.map((a: any) => ({
           assignment_id: a.assignment_id,
           tenant_id: a.tenant_id,
@@ -79,15 +83,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
           role: a.role,
           branch_id: a.branch_id || null,
           branch_name: a.branch_name || null,
-          status: a.status || 'inactive',
+          status: a.status || 'active',
+          platform_id: a.platform_id,
+          stake_percentage: a.stake_percentage,
         }));
         setAssignments(allAssignments);
         setCurrentAssignment(allAssignments[0]);
+        console.log("AuthContext: currentAssignment set to:", allAssignments[0]);
       } else {
+        console.log("AuthContext: User has no assignments.");
         setAssignments([]);
         setCurrentAssignment(null);
       }
     } else {
+      console.log("AuthContext: No user in sessionData.");
       setProfile(null);
       setAssignments([]);
       setCurrentAssignment(null);
@@ -109,12 +118,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
     const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (signInError) throw signInError;
 
-    const { data: { user }, error: getUserError } = await supabaseClient.auth.getUser();
-    if (getUserError) throw getUserError;
+    // After successful sign-in, explicitly get the session and process it
+    const { data: { session }, error: getSessionError } = await supabaseClient.auth.getSession();
+    if (getSessionError) throw getSessionError;
+    
+    processSession(session); // Manually trigger session processing to update context state
 
-    const role = user?.app_metadata?.assignments?.[0]?.role || null;
+    const role = session?.user?.app_metadata?.assignments?.[0]?.role || null;
     return role;
-  }, [supabaseClient]);
+  }, [supabaseClient, processSession]);
 
   const logout = useCallback(async () => {
     await supabaseClient.auth.signOut();
@@ -143,6 +155,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
     await refreshUser();
   }, [user, supabaseClient, refreshUser]);
 
+  const switchCurrentAssignment = useCallback((assignment: UserAssignment) => {
+    setCurrentAssignment(assignment);
+    // Navigate to the appropriate page for the new role
+    switch (assignment.role) {
+      case 'investor':
+        navigate('/dashboard');
+        break;
+      case 'vendor':
+        navigate('/commissions');
+        break;
+      case 'super_admin':
+      case 'app_super_admin':
+        navigate('/');
+        break;
+      default:
+        navigate('/');
+    }
+  }, [navigate]);
+
   const contextValue = useMemo(() => ({
     session,
     user,
@@ -153,9 +184,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
     login,
     logout,
     switchAssignment,
+    switchCurrentAssignment,
     refreshUser,
     loading,
-  }), [session, user, profile, assignments, currentAssignment, loading, login, logout, switchAssignment, refreshUser]);
+  }), [session, user, profile, assignments, currentAssignment, loading, login, logout, switchAssignment, switchCurrentAssignment, refreshUser]);
+
+  console.log("AuthContext: providing value", contextValue);
 
   return (
     <AuthContext.Provider value={contextValue}>

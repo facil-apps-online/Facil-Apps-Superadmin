@@ -1,4 +1,4 @@
-import { useIntegrationProviders } from '@/hooks/useIntegrationProviders';
+import { useGlobalIntegrations } from '@/hooks/useGlobalIntegrations';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { CheckCircle, Power, PowerOff, Mail, FolderKanban, Send, Globe, Settings
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
-import { useTenantIntegrations, useDeleteIntegration } from '@/hooks/useTenantIntegrations';
+import { useTenantIntegrations, useDeleteIntegration, TenantIntegration } from '@/hooks/useTenantIntegrations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,178 +26,374 @@ import { Badge } from '@/components/ui/badge';
 // (El resto de los componentes auxiliares como useGoogleAuthUrl, IntegrationCard, etc., se mantienen igual)
 type Provider = 'google_drive' | 'google_gmail' | string;
 
+interface RpcResponseData {
+
+  success: boolean;
+
+  message?: string;
+
+  url?: string;
+
+}
+
+
+
 const useGoogleAuthUrl = (tenantId: string, rpcName: 'get_google_auth_url' | 'get_gmail_auth_url') => {
-  return useQuery({
+
+  return useQuery<{ url: string, success: boolean } | null, Error>({
+
     queryKey: [rpcName, tenantId],
+
     queryFn: async () => {
+
       if (!tenantId) return null;
+
       const { data, error } = await supabase.rpc(rpcName, { p_tenant_id: tenantId });
+
       if (error) throw new Error(error.message);
+
       return data;
+
     },
+
     enabled: false,
+
     retry: false,
+
   });
+
 };
+
+
 
 const IntegrationCard = ({ title, icon, isConnected, accountEmail, onConnect, onDisconnect, isConnecting, isDisconnecting, onTest, isTesting }) => {
+
   return (
+
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4">
+
       <div className="flex items-center gap-4">
+
         {icon}
+
         <span className="font-semibold">{title}</span>
+
       </div>
+
       
+
       {isConnected ? (
+
         <div className="flex flex-col items-start sm:items-end gap-3">
+
           <div className="flex items-start gap-2 text-sm">
+
             <CheckCircle className="h-5 w-5 text-green-500 mt-1 flex-shrink-0" />
+
             <div className="flex flex-col">
+
               <span className="text-muted-foreground">Conectado como:</span>
+
               <span className="font-bold text-foreground break-all">{accountEmail}</span>
+
             </div>
+
           </div>
+
           <div className="flex items-center gap-2">
+
             {onTest && (
+
               <Button onClick={onTest} variant="secondary" size="sm" disabled={isTesting}>
+
                 <Send className="mr-2 h-4 w-4" />
+
                 {isTesting ? 'Encolando...' : 'Enviar Prueba'}
+
               </Button>
+
             )}
+
             <Button onClick={onDisconnect} variant="destructive" size="sm" disabled={isDisconnecting}>
+
               <PowerOff className="mr-2 h-4 w-4" />
+
               {isDisconnecting ? 'Desconectando...' : 'Desconectar'}
+
             </Button>
+
           </div>
+
         </div>
+
       ) : (
+
         <Button onClick={onConnect} disabled={isConnecting}>
+
           <Power className="mr-2 h-4 w-4" />
+
           {isConnecting ? 'Conectar...' : `Conectar con ${title}`}
+
         </Button>
+
       )}
+
     </div>
+
   );
+
 };
 
+
+
 const formatProviderName = (provider: Provider | null): string => {
+
   if (!provider) return '';
+
   if (provider === 'google_drive') return 'Google Drive';
+
   if (provider === 'google_gmail') return 'Gmail';
+
   return provider.charAt(0).toUpperCase() + provider.slice(1);
+
 };
+
+
+
 
 
 // Hook para la nueva mutación que activa una integración
+
 const useSetActiveIntegration = () => {
+
   const { user } = useAuth();
+
   const queryClient = useQueryClient();
+
   const { toast } = useToast();
 
-  return useMutation<null, Error, { integrationId: string; tenantId: string }>({
+
+
+  return useMutation<null, Error, { integrationId: string; tenantId: string }> ({
+
     mutationFn: async ({ integrationId }) => {
+
       const { error } = await supabase.rpc('set_active_integration', {
+
         p_integration_id: integrationId,
+
       });
 
+
+
       if (error) throw error;
+
       return null;
+
     },
+
     onSuccess: (_, variables) => {
+
       toast({ title: "Éxito", description: "La integración activa ha sido actualizada." });
+
       queryClient.invalidateQueries({ queryKey: ['tenantIntegrations', variables.tenantId] });
+
     },
+
     onError: (error) => {
+
       toast({ title: "Error", description: `No se pudo cambiar la integración activa: ${error.message}`, variant: "destructive" });
+
     },
+
   });
+
 };
 
+
+
 export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => {
+
   const { toast } = useToast();
+
   const queryClient = useQueryClient();
+
   const { data: integrations, isLoading, isError, error } = useTenantIntegrations(tenantId);
-  const { data: availableProviders, isLoading: isLoadingProviders } = useIntegrationProviders();
+
+  const { data: globalIntegrationsData, isLoading: isLoadingProviders } = useGlobalIntegrations();
+
+  const availableProviders = globalIntegrationsData?.providers;
+
   const disconnectMutation = useDeleteIntegration();
+
   const setActiveMutation = useSetActiveIntegration();
 
+
+
   const [disconnectAlert, setDisconnectAlert] = useState<{ isOpen: boolean; provider: Provider | null; accountEmail: string | null; integrationId?: string }>({ isOpen: false, provider: null, accountEmail: null });
+
   const [connectingProvider, setConnectingProvider] = useState<Provider | null>(null);
+
   const [isSendingTest, setIsSendingTest] = useState(false);
-  const [configProvider, setConfigProvider] = useState<any | null>(null);
+
+  const [configProvider, setConfigProvider] = useState<IntegrationProvider | null>(null);
+
+
 
   const { refetch: getDriveAuthUrl, isFetching: isFetchingDriveUrl } = useGoogleAuthUrl(tenantId, 'get_google_auth_url');
+
   const { refetch: getGmailAuthUrl, isFetching: isFetchingGmailUrl } = useGoogleAuthUrl(tenantId, 'get_gmail_auth_url');
 
+
+
   // Agrupar integraciones por proveedor
+
   const groupedIntegrations = integrations?.reduce((acc, int) => {
+
     if (int.provider.startsWith('google_')) return acc; // Excluir Google de la agrupación genérica
+
     if (!acc[int.provider]) {
+
       acc[int.provider] = [];
+
     }
+
     acc[int.provider].push(int);
+
     return acc;
-  }, {} as Record<string, any[]>);
+
+  }, {} as Record<string, TenantIntegration[]>);
+
+
 
   const googleDriveIntegration = integrations?.find(int => int.provider === 'google_drive');
+
   const gmailIntegration = integrations?.find(int => int.provider === 'google_gmail');
 
+
+
   const unconfiguredProviders = availableProviders?.filter(
+
     provider => {
+
       if (!provider.slug || provider.status !== 'active' || provider.slug.startsWith('google_')) return false;
+
       return !groupedIntegrations || !groupedIntegrations[provider.slug];
+
     }
+
   );
 
+
+
   // ... (el resto de los hooks y handlers como useEffect, handleConnect, etc. se mantienen)
+
   useEffect(() => {
+
     const handleAuthMessage = (event: MessageEvent) => {
+
       if (event.origin !== window.location.origin) return;
+
       const { type, success, error } = event.data;
+
       if (type === 'google-auth-callback') {
+
         const providerName = formatProviderName(connectingProvider);
+
         if (success) {
+
           toast({ title: 'Éxito', description: `La integración con ${providerName} se ha completado.` });
+
           // Invalidar todas las consultas que coincidan con el inicio de la clave
+
           queryClient.invalidateQueries({ 
+
             predicate: query => 
+
               query.queryKey[0] === 'tenantIntegrations' && 
+
               query.queryKey[1] === tenantId 
+
           });
+
           queryClient.resetQueries({ queryKey: ['get_google_auth_url', tenantId] });
+
           queryClient.resetQueries({ queryKey: ['get_gmail_auth_url', tenantId] });
+
         } else {
+
           toast({ title: 'Error de Autenticación', description: `No se pudo completar la integración con ${providerName}: ${error || 'Error desconocido.'}`, variant: 'destructive' });
+
         }
+
         setConnectingProvider(null);
+
       }
+
     };
+
     window.addEventListener('message', handleAuthMessage);
+
     return () => window.removeEventListener('message', handleAuthMessage);
+
   }, [queryClient, tenantId, toast, connectingProvider]);
 
-  const handleConnect = useCallback(async (getAuthUrl: () => Promise<any>, provider: Provider) => {
+
+
+  const handleConnect = useCallback(async (getAuthUrl: () => Promise<{ url: string, success: boolean } | null>, provider: Provider) => {
+
     setConnectingProvider(provider);
+
     try {
-      const { data: rpcResponse, error: rpcError } = await getAuthUrl();
-      if (rpcError) throw new Error(rpcError.message);
-      
-      const result = Array.isArray(rpcResponse) ? rpcResponse[0] : rpcResponse;
+
+                  const { data: rpcResponseData, error: rpcError } = await getAuthUrl();
+
+                  if (rpcError) throw new Error(rpcError.message);
+
+                  
+
+                  // Ensure rpcResponseData is not null and is a single object
+
+                  if (!rpcResponseData) {
+
+                    throw new Error('No se pudo obtener la URL de autorización.');
+
+                  }
+
+            
+
+                  const result = Array.isArray(rpcResponseData) ? rpcResponseData[0] : rpcResponseData;
+
+
 
       if (!result || !result.success) {
+
         throw new Error(result?.message || 'No se pudo obtener la URL de autorización.');
+
       }
+
       if (!result.url) {
+
         throw new Error('La URL de autorización no fue devuelta por el servidor.');
+
       }
+
       
+
       const width = 600, height = 700, left = window.screen.width / 2 - width / 2, top = window.screen.height / 2 - height / 2;
+
       window.open(result.url, 'googleAuth', `width=${width},height=${height},top=${top},left=${left}`);
-    } catch (e: any) {
+
+    } catch (e: Error) {
+
       console.error('[handleConnect] Excepción capturada:', e);
+
       toast({ title: 'Error de Conexión', description: e.message, variant: 'destructive' });
+
       setConnectingProvider(null);
+
     }
+
   }, [toast]);
 
   const handleDisconnectRequest = (integrationId: string, provider: Provider) => {
@@ -216,7 +412,7 @@ export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => 
           toast({ title: 'Éxito', description: `La integración ha sido desconectada.` });
           queryClient.invalidateQueries({ queryKey: ['tenantIntegrations', tenantId] });
         },
-        onError: (e: any) => {
+        onError: (e: Error) => {
           toast({ title: 'Error', description: e.message, variant: 'destructive' });
         },
         onSettled: () => {
@@ -226,10 +422,16 @@ export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => 
     );
   };
 
+interface EnqueueTestEmailResponse {
+  success: boolean;
+  message?: string;
+  job?: Record<string, unknown>;
+}
+
   const handleSendTestEmail = async () => {
     setIsSendingTest(true);
     try {
-      const { data: jobData, error: rpcError } = await supabase.rpc('enqueue_test_email');
+      const { data: jobData, error: rpcError } = await supabase.rpc('enqueue_test_email') as { data: EnqueueTestEmailResponse, error: Error };
 
       if (rpcError) throw rpcError;
       if (!jobData.success) throw new Error(jobData.message);
@@ -250,7 +452,7 @@ export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => 
         description: "El proceso de envío ha comenzado en segundo plano.",
       });
 
-    } catch (error: any) {
+    } catch (error: Error) {
       console.error("Error en el proceso de envío de prueba:", error);
       toast({
         title: "Error",
@@ -320,7 +522,7 @@ export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => 
                     <span className="font-semibold text-lg">{providerInfo?.name || providerSlug}</span>
                   </div>
                   <div className="space-y-3">
-                    {configs.map((integration: any) => (
+                    {configs.map((integration: TenantIntegration) => (
                       <div key={integration.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-md">
                         <div className="flex items-center gap-3">
                           <Badge variant={integration.environment === 'production' ? 'default' : 'secondary'}>{integration.environment}</Badge>

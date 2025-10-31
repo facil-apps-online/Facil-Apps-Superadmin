@@ -89,6 +89,7 @@ export default function PlatformSettings() {
       queryClient.invalidateQueries({ queryKey: ['platform', platformId] });
     },
     onError: (error) => {
+      console.error("Error updating platform settings:", error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
@@ -124,9 +125,9 @@ export default function PlatformSettings() {
   useEffect(() => {
     if (platform) {
       form.reset({
-        default_currency_id: platform.default_currency_id,
-        default_language_id: platform.default_language_id,
-        default_timezone: platform.default_timezone,
+        default_currency_id: platform.default_currency_id || null,
+        default_language_id: platform.default_language_id || null,
+        default_timezone: platform.default_timezone || null,
       });
     }
   }, [platform, form]);
@@ -139,6 +140,7 @@ export default function PlatformSettings() {
 
   // --- Handlers ---
   const onSubmit = (values: SettingsFormValues) => {
+    console.log("Submitting values:", values);
     updateSettingsMutation.mutate(values);
   };
 
@@ -188,34 +190,37 @@ export default function PlatformSettings() {
                   <FormField
                     control={form.control}
                     name="default_currency_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Moneda por Defecto</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar moneda..." /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {catalogs?.currencies?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      return (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar moneda..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {catalogs?.currencies?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                   <FormField
                     control={form.control}
                     name="default_language_id"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Idioma por Defecto</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar idioma..." /></SelectTrigger></FormControl>
-                          <SelectContent>
-                            {catalogs?.languages?.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      return (
+                        <FormItem>
+                          <FormLabel>Idioma por Defecto</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar idioma..." /></SelectTrigger></FormControl>
+                            <SelectContent>
+                              {catalogs?.languages?.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                   {/* TODO: Add Timezone Select when ready */}
                 </CardContent>

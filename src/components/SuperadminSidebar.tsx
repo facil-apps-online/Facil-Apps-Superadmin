@@ -139,14 +139,7 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Reportes de Errores">
-                        <Link to="/error-reports" onClick={handleLinkClick}>
-                            <Bug />
-                            <span>Reportes de Errores</span>
-                        </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
+
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Métricas de Rendimiento">
                         <Link to="/performance-metrics" onClick={handleLinkClick}>
