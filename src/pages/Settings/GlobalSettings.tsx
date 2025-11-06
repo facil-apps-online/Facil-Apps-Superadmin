@@ -5,6 +5,7 @@ import { CountriesSettings } from '@/components/settings/CountriesSettings';
 import { CurrenciesSettings } from '@/components/settings/CurrenciesSettings';
 import { LanguagesSettings } from '@/components/settings/LanguagesSettings';
 import { TimezonesSettings } from '@/components/settings/TimezonesSettings';
+import { AssetPurposesSettings } from '@/components/settings/AssetPurposesSettings'; // NEW IMPORT
 
 export default function GlobalSettings() {
   return (
@@ -17,6 +18,7 @@ export default function GlobalSettings() {
           <TabsTrigger value="currencies">Monedas</TabsTrigger>
           <TabsTrigger value="languages">Idiomas</TabsTrigger>
           <TabsTrigger value="timezones">Zonas Horarias</TabsTrigger>
+          <TabsTrigger value="asset-purposes">Propósitos de Assets</TabsTrigger> {/* NEW TAB TRIGGER */}
         </TabsList>
         <TabsContent value="general">
           <GeneralCompanySettings />
@@ -30,10 +32,13 @@ export default function GlobalSettings() {
         <TabsContent value="languages">
           <LanguagesSettings />
         </TabsContent>
-        <TabsContent value="timezones">
-          <TimezonesSettings />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
-}
+                    <TabsContent value="timezones">
+                      <TimezonesSettings />
+                    </TabsContent>
+                    <TabsContent value="asset-purposes"> {/* NEW TAB CONTENT */}
+                      <AssetPurposesSettings />
+                    </TabsContent>
+                  </Tabs>
+                </div>
+              );
+            }

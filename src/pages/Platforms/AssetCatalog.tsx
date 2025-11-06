@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { PlusCircle, Edit, Trash2, ArrowLeft } from 'lucide-react';
+import { useAssetPurposes } from '@/hooks/useAssetPurposes'; // NEW IMPORT
 
 // --- Zod Schema for Asset Form ---
 const assetSchema = z.object({
@@ -20,6 +21,7 @@ const assetSchema = z.object({
   name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }),
   description: z.string().optional(),
   data_type: z.enum(['boolean', 'numeric']),
+  asset_purpose_id: z.string().uuid({ message: "Debe seleccionar un propósito." }),
 });
 type AssetFormValues = z.infer<typeof assetSchema>;
 
@@ -30,6 +32,8 @@ interface PlanAsset {
   name: string;
   description: string | null;
   data_type: 'boolean' | 'numeric';
+  asset_purpose_id: string;
+  asset_purpose_key?: string;
 }
 
 export default function AssetCatalog() {
@@ -40,6 +44,7 @@ export default function AssetCatalog() {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<PlanAsset | null>(null);
+  const { data: assetPurposes, isLoading: isLoadingPurposes } = useAssetPurposes(); // NEW HOOK CALL
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -66,9 +71,9 @@ export default function AssetCatalog() {
   }, [platformId]);
 
   const handleDialogOpen = (asset: PlanAsset | null = null) => {
-    setEditingAsset(asset);
-    form.reset(asset ? { ...asset, description: asset.description || '' } : { asset_key: '', name: '', description: '', data_type: 'numeric' });
-    setDialogOpen(true);
+      setEditingAsset(asset);
+      form.reset(asset ? { ...asset, description: asset.description || '' } : { asset_key: '', name: '', description: '', data_type: 'numeric', asset_purpose_id: '' });
+      setDialogOpen(true);
   };
 
   const onSubmit = async (values: AssetFormValues) => {
@@ -143,6 +148,25 @@ export default function AssetCatalog() {
                   <FormMessage />
                 </FormItem>
               )} />
+
+              {/* NEW FIELD FOR ASSET PURPOSE */}
+              <FormField control={form.control} name="asset_purpose_id" render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Propósito del Asset</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingPurposes}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Seleccione un propósito..." /></SelectTrigger></FormControl>
+                    <SelectContent>
+                      {assetPurposes?.map(purpose => (
+                        <SelectItem key={purpose.id} value={purpose.id}>
+                          {purpose.purpose_key}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )} />
+
               <DialogFooter>
                 <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
                 <Button type="submit">Guardar</Button>
@@ -155,20 +179,21 @@ export default function AssetCatalog() {
       {/* Assets Table */}
       <div className="border rounded-lg">
         <Table>
-          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Clave</TableHead><TableHead>Tipo</TableHead><TableHead>Acciones</TableHead></TableRow></TableHeader>
+          <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Clave</TableHead><TableHead>Propósito</TableHead><TableHead>Tipo</TableHead><TableHead>Acciones</TableHead></TableRow></TableHeader>
           <TableBody>
-            {loading ? <TableRow><TableCell colSpan={4} className="text-center">Cargando...</TableCell></TableRow> :
+            {loading ? <TableRow><TableCell colSpan={5} className="text-center">Cargando...</TableCell></TableRow> :
              assets.length > 0 ? assets.map(asset => (
               <TableRow key={asset.id}>
                 <TableCell>{asset.name}</TableCell>
                 <TableCell><code>{asset.asset_key}</code></TableCell>
+                <TableCell>{asset.asset_purpose_key || 'N/A'}</TableCell>
                 <TableCell>{asset.data_type}</TableCell>
                 <TableCell className="flex gap-2">
                   <Button variant="outline" size="icon" onClick={() => handleDialogOpen(asset)}><Edit className="h-4 w-4" /></Button>
                   <Button variant="destructive" size="icon" onClick={() => handleDelete(asset.id)}><Trash2 className="h-4 w-4" /></Button>
                 </TableCell>
               </TableRow>
-            )) : <TableRow><TableCell colSpan={4} className="text-center">No hay activos definidos.</TableCell></TableRow>}
+            )) : <TableRow><TableCell colSpan={5} className="text-center">No hay activos definidos.</TableCell></TableRow>}
           </TableBody>
         </Table>
       </div>

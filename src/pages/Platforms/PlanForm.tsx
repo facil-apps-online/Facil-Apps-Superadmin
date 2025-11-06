@@ -1,188 +1,285 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Separator } from '@/components/ui/separator';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ArrowLeft, ScrollText } from 'lucide-react';
-import { usePlanPricing } from '@/hooks/usePlanPricing';
+import { ArrowLeft, PlusCircle, Trash2 } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
+import { usePlanPricing } from '@/hooks/usePlanPricing';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { DatePickerWrapper } from '@/components/ui/DatePicker';
+import { useCurrencies } from '@/hooks/useCurrencies';
+import { useAssetPurposes, AssetPurpose } from '@/hooks/useAssetPurposes'; // NEW IMPORT
 
-// --- Types ---
-type BonusConfig = {
-  targetAssetKey: string;
-  quantity: number | '';
-};
 
-type FutureAssetPrice = {
-  extra_unit_price: number;
-  overage_unit_price: number;
-};
-
-type FutureTariffDetails = {
-  base_price: number | '';
-  effective_date: string;
-  asset_prices: Record<string, FutureAssetPrice>;
-};
-
-const assetLimitSchema = z.object({
-  value: z.union([z.string(), z.boolean()]),
-  extra_unit_price: z.preprocess(
-    (val) => (val === '' || val === null || val === undefined) ? 0 : parseFloat(String(val)),
-    z.number().min(0).default(0)
-  ),
-  overage_unit_price: z.preprocess(
-    (val) => (val === '' || val === null || val === undefined) ? 0 : parseFloat(String(val)),
-    z.number().min(0).default(0)
-  ),
-  bonus_on_extra: z.string().nullable().optional(),
-});
-
-const planSchema = z.object({
-  name: z.string().min(3, { message: "El nombre debe tener al menos 3 caracteres." }),
-  description: z.string().optional(),
-  is_active: z.boolean().default(true),
-  assets: z.record(assetLimitSchema),
-});
-
-type PlanFormValues = z.infer<typeof planSchema>;
+// --- Type Definitions ---
 
 interface PlanAsset {
   id: string;
-  asset_key: string;
   name: string;
   description: string | null;
   data_type: 'boolean' | 'numeric';
+  asset_purpose_id?: string; // NEW FIELD
+  asset_purpose_key?: string; // NEW FIELD
 }
+
+interface Country {
+  id: string;
+  name: string;
+}
+
+interface PlanDetails {
+  id: string;
+  name: string;
+  description: string;
+}
+
+interface Bonus {
+  id?: string;
+  bonus_asset_id: string;
+  quantity: number;
+}
+
+interface AssetLimit {
+  id?: string;
+  asset_id: string;
+  value: string;
+  extra_unit_price: number;
+  overage_unit_price: number;
+  bonuses?: Bonus[];
+}
+
+interface CountryConfiguration {
+  id: string | null;
+  plan_id: string;
+  country_id: string;
+  features: string[];
+  asset_limits: AssetLimit[];
+}
+
+// --- Zod Schemas ---
+const newPriceSchema = z.object({
+  base_price: z.coerce.number().positive("El precio debe ser mayor a cero."),
+  effective_date: z.date({ required_error: "Debe seleccionar una fecha." }),
+});
+
+
+// --- Sub-Components ---
+
+const PriceHistoryCard = ({ planId }: { planId: string }) => {
+  const { tariffs, isLoadingTariffs } = usePlanPricing(planId);
+
+  const getStatus = (date: string, index: number) => {
+    const effectiveDate = new Date(date);
+    const now = new Date();
+    if (effectiveDate > now) return <Badge variant="warning">Programado</Badge>;
+    // The first tariff in the list returned by the query (ordered by effective_date desc) is the current one
+    if (index === 0) return <Badge variant="success">Vigente</Badge>;
+    return <Badge variant="secondary">Archivado</Badge>;
+  };
+
+  if (isLoadingTariffs) return <Card><CardHeader><CardTitle>Historial de Precios</CardTitle></CardHeader><CardContent>Cargando historial...</CardContent></Card>;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Historial de Precios Base (COP)</CardTitle>
+        <CardDescription>Muestra los precios base programados, vigentes y archivados para este plan.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Fecha de Vigencia</TableHead>
+              <TableHead>Precio Base</TableHead>
+              <TableHead>Estado</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {tariffs && tariffs.length > 0 ? (
+              tariffs.map((tariff, index) => (
+                <TableRow key={tariff.id}>
+                  <TableCell>{format(new Date(tariff.effective_date), 'dd/MM/yyyy')}</TableCell>
+                  <TableCell>{new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP' }).format(tariff.base_price)}</TableCell>
+                  <TableCell>{getStatus(tariff.effective_date, index)}</TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={3} className="text-center">No hay historial de precios para este plan.</TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
+  );
+};
+
+const ScheduleNewPriceCard = ({ planId, configurations, selectedCountryId }: { planId: string, configurations: Record<string, CountryConfiguration>, selectedCountryId: string }) => {
+  const { toast } = useToast();
+  const { scheduleNewTariff, isScheduling } = usePlanPricing(planId);
+  const { data: currencies, isLoading: isLoadingCurrencies } = useCurrencies();
+  
+  const form = useForm<z.infer<typeof newPriceSchema>>({
+    resolver: zodResolver(newPriceSchema),
+    defaultValues: { base_price: 0, effective_date: new Date() },
+  });
+
+  const onAddNewPrice = (values: z.infer<typeof newPriceSchema>) => {
+    if (!selectedCountryId) {
+      toast({ title: 'Error', description: 'Por favor, selecciona un país antes de programar un precio.', variant: 'destructive' });
+      return;
+    }
+
+    const copCurrency = currencies?.find(c => c.code === 'COP');
+    if (!copCurrency) {
+      toast({ title: 'Error de configuración', description: 'No se encontró la moneda COP en el sistema. Contacte a soporte.', variant: 'destructive' });
+      return;
+    }
+
+    // NOTE: We use the asset limits from the currently selected country as the template for the new tariff.
+    const currentAssetLimits = configurations[selectedCountryId]?.asset_limits || [];
+    const assetPricesData = currentAssetLimits.map(limit => ({
+      asset_id: limit.asset_id,
+      extra_unit_price: limit.extra_unit_price || 0,
+      overage_unit_price: limit.overage_unit_price || 0,
+    }));
+
+    const tariffData = {
+      subscription_plan_id: planId,
+      base_price: values.base_price,
+      effective_date: format(values.effective_date, 'yyyy-MM-dd'),
+      currency_id: copCurrency.id, // Use dynamic ID
+    };
+
+    scheduleNewTariff({ tariffData, assetPricesData }, {
+      onSuccess: () => {
+        toast({ title: 'Éxito', description: 'Nuevo precio programado correctamente.' });
+        form.reset();
+      },
+      onError: (err) => toast({ title: 'Error', description: err.message, variant: 'destructive' }),
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Programar Nuevo Precio Base</CardTitle>
+        <CardDescription>Define un nuevo precio base en COP y la fecha en que se hará efectivo. Los límites de activos se copiarán de la configuración del país seleccionado actualmente.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onAddNewPrice)} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+            <FormField control={form.control} name="base_price" render={({ field }) => (
+              <FormItem><FormLabel>Nuevo Precio Base (COP)</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <FormField control={form.control} name="effective_date" render={({ field }) => (
+              <FormItem className="flex flex-col"><FormLabel>Fecha de Vigencia</FormLabel><FormControl><DatePickerWrapper selected={field.value} onChange={field.onChange} /></FormControl><FormMessage /></FormItem>
+            )} />
+            <Button type="submit" className="self-end" disabled={isScheduling || isLoadingCurrencies}><PlusCircle className="mr-2 h-4 w-4" /> Programar</Button>
+          </form>
+        </Form>
+      </CardContent>
+    </Card>
+  );
+}
+
 
 export default function PlanForm() {
   const { platformId, planId } = useParams<{ platformId: string; planId?: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(true);
-  const [platformCurrencyId, setPlatformCurrencyId] = useState<string | null>(null);
-  const [availableAssets, setAvailableAssets] = useState<PlanAsset[]>([]);
-  const [bonuses, setBonuses] = useState<Record<string, BonusConfig>>({});
-  const [isPriceDialogOpen, setIsPriceDialogOpen] = useState(false);
-  const [futureTariffDetails, setFutureTariffDetails] = useState<FutureTariffDetails | null>(null);
   const isEditMode = !!planId;
 
-  const { tariffs, isLoadingTariffs, scheduleNewTariff, isScheduling } = usePlanPricing(planId || '');
+  // --- State Management ---
+  const [loading, setLoading] = useState(true);
+  const [plan, setPlan] = useState<PlanDetails | null>(null);
+  const [countries, setCountries] = useState<Country[]>([]);
+  const [availableAssets, setAvailableAssets] = useState<PlanAsset[]>([]);
+  const [configurations, setConfigurations] = useState<Record<string, CountryConfiguration>>({});
+  const [selectedCountryId, setSelectedCountryId] = useState<string>('');
+  const [bonusDialogState, setBonusDialogState] = useState({ isOpen: false, sourceAssetId: '' });
+  const [currentBonus, setCurrentBonus] = useState<{ bonus_asset_id: string; quantity: number } | null>(null);
 
-  const form = useForm<PlanFormValues>({
-    resolver: zodResolver(planSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      is_active: true,
-      assets: {},
-    },
-  });
+  const { data: assetPurposes, isLoading: isLoadingAssetPurposes } = useAssetPurposes(); // NEW HOOK CALL
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!platformId) return;
+      if (!planId || !platformId) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
-        // Fetch all data in parallel
-        const platformPromise = supabase.functions.invoke('superadmin-actions', {
-          body: { action: 'get_platform_by_id', payload: { platformId } },
-        });
-        const assetsPromise = supabase.functions.invoke('superadmin-actions', {
-          body: { action: 'get_plan_assets_by_platform', payload: { platformId } },
-        });
-        const planPromise = isEditMode && planId
-          ? supabase.functions.invoke('superadmin-actions', {
-              body: { action: 'get_subscription_plan_by_id', payload: { planId } },
-            })
-          : Promise.resolve({ data: null, error: null });
-        const limitsPromise = isEditMode && planId
-          ? supabase.functions.invoke('superadmin-actions', {
-              body: { action: 'get_plan_asset_limits', payload: { planId } },
-            })
-          : Promise.resolve({ data: [], error: null });
-
-        const [platformResult, assetsResult, planResult, limitsResult] = await Promise.all([
-          platformPromise,
-          assetsPromise,
-          planPromise,
-          limitsPromise,
+        const [{ data: planDetails, error: planError }, { data: assets, error: assetsError }] = await Promise.all([
+          supabase.functions.invoke('superadmin-actions', { body: { action: 'get_plan_details', payload: { planId } } }),
+          supabase.functions.invoke('superadmin-actions', { body: { action: 'get_plan_assets_by_platform', payload: { platformId } } })
         ]);
 
-        if (platformResult.error) throw platformResult.error;
-        if (assetsResult.error) throw assetsResult.error;
-        if (planResult.error) throw planResult.error;
-        if (limitsResult.error) throw limitsResult.error;
+        if (planError) throw planError;
+        if (assetsError) throw assetsError;
 
-        // Set Platform Currency
-        if (!platformResult.data?.default_currency_id) {
-          throw new Error("La plataforma no tiene una moneda por defecto configurada.");
-        }
-        setPlatformCurrencyId(platformResult.data.default_currency_id);
+        setPlan(planDetails.plan);
+        const allCountries = planDetails.countries || [];
+        setCountries(allCountries);
+        setAvailableAssets(assets || []);
 
-        const fetchedAssets = assetsResult.data || [];
-        setAvailableAssets(fetchedAssets);
+        const backendConfigs = planDetails.configurations || {};
+        const newConfigs: Record<string, CountryConfiguration> = {};
 
-        const planDetails = planResult.data;
-        const limits = limitsResult.data || [];
-        
-        const initialAssetValues: Record<string, any> = {};
-        const initialBonuses: Record<string, BonusConfig> = {};
+        allCountries.forEach((country: Country) => {
+          const countryId = country.id;
+          const existingConfig = backendConfigs[countryId];
+          let countryConfig;
 
-        fetchedAssets.forEach(asset => {
-          const limit = limits.find((l: any) => l.asset_id === asset.id);
+          if (existingConfig && existingConfig.id) {
+            countryConfig = JSON.parse(JSON.stringify(existingConfig)); // Deep copy
+          } else {
+            countryConfig = {
+              id: null,
+              plan_id: planId,
+              country_id: countryId,
+              features: [],
+              asset_limits: []
+            };
+          }
+
+          const existingLimits = countryConfig.asset_limits || [];
+          const existingAssetIds = new Set(existingLimits.map((l: AssetLimit) => l.asset_id));
+          const missingAssets = (assets || []).filter((asset: PlanAsset) => !existingAssetIds.has(asset.id));
+
+          countryConfig.asset_limits = [
+            ...existingLimits,
+            ...missingAssets.map((asset: PlanAsset) => ({
+              asset_id: asset.id,
+              value: asset.data_type === 'boolean' ? 'false' : '0',
+              extra_unit_price: 0,
+              overage_unit_price: 0,
+              bonuses: [],
+            }))
+          ];
           
-          if (limit && limit.bonus_on_extra) {
-            try {
-              const parsedBonus = typeof limit.bonus_on_extra === 'string' 
-                ? JSON.parse(limit.bonus_on_extra) 
-                : limit.bonus_on_extra;
-              
-              initialBonuses[asset.id] = {
-                targetAssetKey: parsedBonus.asset_key || '',
-                quantity: parsedBonus.quantity || '',
-              };
-            } catch (e) {
-              console.error("Error parsing bonus JSON:", limit.bonus_on_extra);
-              initialBonuses[asset.id] = { targetAssetKey: '', quantity: '' };
-            }
-          } else {
-            initialBonuses[asset.id] = { targetAssetKey: '', quantity: '' };
-          }
-
-          if (asset.data_type === 'boolean') {
-            initialAssetValues[asset.asset_key] = {
-              value: limit ? limit.value === 'true' : false
-            };
-          } else {
-            initialAssetValues[asset.asset_key] = {
-              value: limit ? limit.value : '0',
-              extra_unit_price: limit ? limit.extra_unit_price : 0,
-              overage_unit_price: limit ? limit.overage_unit_price : 0,
-              bonus_on_extra: limit && limit.bonus_on_extra ? JSON.stringify(limit.bonus_on_extra) : null
-            };
-          }
+          newConfigs[countryId] = countryConfig;
         });
 
-        setBonuses(initialBonuses);
+        setConfigurations(newConfigs);
 
-        form.reset({
-          name: planDetails?.name ?? '',
-          description: planDetails?.description ?? '',
-          is_active: planDetails?.is_active ?? true,
-          assets: initialAssetValues,
-        });
+        if (allCountries.length > 0) {
+          setSelectedCountryId(allCountries[0].id);
+        }
 
       } catch (err: any) {
         toast({ title: "Error al cargar datos", description: err.message, variant: "destructive" });
@@ -190,96 +287,90 @@ export default function PlanForm() {
         setLoading(false);
       }
     };
+
     fetchData();
-  }, [platformId, planId, isEditMode, form, toast]);
+  }, [planId, platformId, toast]);
 
-  useEffect(() => {
-    Object.keys(bonuses).forEach(assetId => {
-      const asset = availableAssets.find(a => a.id === assetId);
-      if (!asset) return;
-
-      const bonusConfig = bonuses[assetId];
-      if (bonusConfig && bonusConfig.targetAssetKey && bonusConfig.quantity > 0) {
-        const jsonValue = JSON.stringify({
-          asset_key: bonusConfig.targetAssetKey,
-          quantity: bonusConfig.quantity
-        });
-        form.setValue(`assets.${asset.asset_key}.bonus_on_extra`, jsonValue);
-      } else {
-        form.setValue(`assets.${asset.asset_key}.bonus_on_extra`, null);
-      }
-    });
-  }, [bonuses, availableAssets, form]);
-
-  const onSubmit = async (values: PlanFormValues) => {
-    if (!platformCurrencyId) {
-      toast({ title: "Error", description: "No se ha podido determinar la moneda de la plataforma.", variant: "destructive" });
-      return;
+  const handlePlanDetailsChange = (field: keyof PlanDetails, value: any) => {
+    if (plan) {
+      setPlan(prev => ({ ...prev!, [field]: value }));
     }
+  };
+
+  const handleCountryConfigChange = (countryId: string, field: keyof CountryConfiguration, value: any) => {
+    setConfigurations(prev => ({
+      ...prev,
+      [countryId]: { ...prev[countryId], [field]: value },
+    }));
+  };
+
+  const handleFeatureChange = (countryId: string, featureIndex: number, value: string) => {
+    const newFeatures = [...configurations[countryId].features];
+    newFeatures[featureIndex] = value;
+    handleCountryConfigChange(countryId, 'features', newFeatures);
+  };
+
+  const addFeature = (countryId: string) => {
+    const newFeatures = [...configurations[countryId].features, ''];
+    handleCountryConfigChange(countryId, 'features', newFeatures);
+  };
+
+  const removeFeature = (countryId: string, featureIndex: number) => {
+    const newFeatures = configurations[countryId].features.filter((_, i) => i !== featureIndex);
+    handleCountryConfigChange(countryId, 'features', newFeatures);
+  };
+
+  const handleAssetLimitChange = (countryId: string, assetId: string, field: keyof AssetLimit, value: any) => {
+    const newLimits = configurations[countryId].asset_limits.map(limit => {
+      if (limit.asset_id === assetId) {
+        return { ...limit, [field]: value };
+      }
+      return limit;
+    });
+    handleCountryConfigChange(countryId, 'asset_limits', newLimits);
+  };
+
+  const openBonusDialog = (sourceAssetId: string) => {
+    setCurrentBonus({ bonus_asset_id: '', quantity: 1 });
+    setBonusDialogState({ isOpen: true, sourceAssetId });
+  };
+
+  const handleSaveBonus = () => {
+    if (!currentBonus || !currentBonus.bonus_asset_id || !bonusDialogState.sourceAssetId || !selectedCountryId) return;
+
+    const newLimits = configurations[selectedCountryId].asset_limits.map(limit => {
+      if (limit.asset_id === bonusDialogState.sourceAssetId) {
+        const newBonuses = [...(limit.bonuses || []), currentBonus];
+        return { ...limit, bonuses: newBonuses };
+      }
+      return limit;
+    });
+
+    handleCountryConfigChange(selectedCountryId, 'asset_limits', newLimits);
+    setBonusDialogState({ isOpen: false, sourceAssetId: '' });
+    setCurrentBonus(null);
+  };
+
+  const handleRemoveBonus = (sourceAssetId: string, bonusIndex: number) => {
+    const newLimits = configurations[selectedCountryId].asset_limits.map(limit => {
+      if (limit.asset_id === sourceAssetId) {
+        const newBonuses = limit.bonuses?.filter((_, i) => i !== bonusIndex);
+        return { ...limit, bonuses: newBonuses };
+      }
+      return limit;
+    });
+    handleCountryConfigChange(selectedCountryId, 'asset_limits', newLimits);
+  };
+
+  const onSubmit = async () => {
+    if (!planId || !plan) return;
     setLoading(true);
     try {
-      const planPayload = { name: values.name, description: values.description, is_active: values.is_active };
-      const planAction = isEditMode ? 'update_subscription_plan' : 'create_subscription_plan';
-      const planApiPayload = isEditMode
-        ? { planId, planData: planPayload }
-        : { planData: { ...planPayload, platform_id: platformId } };
+      await supabase.functions.invoke('superadmin-actions', { body: { action: 'update_subscription_plan', payload: { planId, planData: { name: plan.name, description: plan.description } } } });
 
-      const { data: planResult, error: planError } = await supabase.functions.invoke('superadmin-actions', {
-        body: { action: planAction, payload: planApiPayload },
-      });
-      if (planError) throw planError;
-      
-      const currentPlanId = isEditMode ? planId! : planResult.id;
+      await supabase.functions.invoke('superadmin-actions', { body: { action: 'update_plan_details', payload: { planId, configurations } } });
 
-      const limitsToUpdate = availableAssets.map(asset => {
-        const assetValue = values.assets[asset.asset_key];
-        let bonusJson = null;
-        if (assetValue.bonus_on_extra && typeof assetValue.bonus_on_extra === 'string' && assetValue.bonus_on_extra.trim() !== '') {
-          try {
-            bonusJson = JSON.parse(assetValue.bonus_on_extra);
-          } catch (e) {
-            throw new Error(`El JSON de bonificación para "${asset.name}" no es válido.`);
-          }
-        }
-        if (asset.data_type === 'boolean') {
-          return { asset_id: asset.id, value: String(assetValue.value ?? false) };
-        }
-        return {
-          asset_id: asset.id,
-          value: String(assetValue.value ?? 0),
-          extra_unit_price: assetValue.extra_unit_price ?? 0,
-          overage_unit_price: assetValue.overage_unit_price ?? 0,
-          bonus_on_extra: bonusJson,
-        };
-      });
-
-      const { error: limitsError } = await supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'update_plan_asset_limits', payload: { planId: currentPlanId, limits: limitsToUpdate } },
-      });
-      if (limitsError) throw limitsError;
-
-      if (!isEditMode) {
-        const numericAssets = availableAssets.filter(a => a.data_type === 'numeric');
-        const assetPricesData = numericAssets.map(asset => {
-          const assetValue = values.assets[asset.asset_key];
-          return {
-            asset_id: asset.id,
-            extra_unit_price: assetValue.extra_unit_price ?? 0,
-            overage_unit_price: assetValue.overage_unit_price ?? 0,
-          };
-        });
-
-        const tariffData = {
-          subscription_plan_id: currentPlanId,
-          effective_date: new Date().toISOString(),
-          base_price: 0,
-          currency_id: platformCurrencyId,
-        };
-
-        await scheduleNewTariff({ tariffData, assetPricesData });
-      }
-
-      toast({ title: `Plan ${isEditMode ? 'actualizado' : 'creado'} con éxito` });
+      toast({ title: "Plan actualizado con éxito" });
       navigate(`/platforms/${platformId}/plans`);
 
     } catch (err: any) {
@@ -289,85 +380,8 @@ export default function PlanForm() {
     }
   };
 
-  const handleOpenPriceDialog = () => {
-    const currentAssetPrices: Record<string, FutureAssetPrice> = {};
-    availableAssets
-      .filter(asset => asset.data_type === 'numeric')
-      .forEach(asset => {
-        const currentValues = form.getValues(`assets.${asset.asset_key}`);
-        currentAssetPrices[asset.id] = {
-          extra_unit_price: currentValues.extra_unit_price ?? 0,
-          overage_unit_price: currentValues.overage_unit_price ?? 0,
-        };
-      });
-
-    setFutureTariffDetails({
-      base_price: tariffs[0]?.base_price ?? '',
-      effective_date: '',
-      asset_prices: currentAssetPrices,
-    });
-    setIsPriceDialogOpen(true);
-  };
-
-  const handleFuturePriceChange = (assetId: string, field: keyof FutureAssetPrice, value: string) => {
-    if (!futureTariffDetails) return;
-    const parsedValue = value === '' ? 0 : parseFloat(value);
-    setFutureTariffDetails(prev => ({
-      ...prev!,
-      asset_prices: {
-        ...prev!.asset_prices,
-        [assetId]: {
-          ...prev!.asset_prices[assetId],
-          [field]: parsedValue,
-        },
-      },
-    }));
-  };
-
-  const handleScheduleTariff = () => {
-    if (!platformCurrencyId) {
-      toast({ title: "Error", description: "No se ha podido determinar la moneda de la plataforma.", variant: "destructive" });
-      return;
-    }
-    if (!planId || !futureTariffDetails || futureTariffDetails.base_price === '' || !futureTariffDetails.effective_date) {
-      toast({ title: "Error", description: "El precio base y la fecha son obligatorios.", variant: "destructive" });
-      return;
-    }
-
-    const assetPricesData = Object.entries(futureTariffDetails.asset_prices).map(([asset_id, prices]) => ({
-      asset_id,
-      extra_unit_price: prices.extra_unit_price,
-      overage_unit_price: prices.overage_unit_price,
-    }));
-
-    const tariffData = {
-      subscription_plan_id: planId,
-      base_price: futureTariffDetails.base_price,
-      effective_date: futureTariffDetails.effective_date,
-      currency_id: platformCurrencyId,
-    };
-
-    scheduleNewTariff(
-      { tariffData, assetPricesData },
-      {
-        onSuccess: () => {
-          toast({ title: "Éxito", description: "Nueva tarifa programada correctamente." });
-          setIsPriceDialogOpen(false);
-          setFutureTariffDetails(null);
-        },
-        onError: (error) => {
-          toast({ title: "Error al programar tarifa", description: error.message, variant: "destructive" });
-        }
-      }
-    );
-  };
-
-  if (loading) {
-    return <div>Cargando...</div>;
-  }
-
-  const currentTariff = tariffs[0];
-  const futureTariffs = tariffs.slice(1);
+  if (loading) return <div>Cargando...</div>;
+  if (!plan) return <div>No se encontró el plan.</div>;
 
   return (
     <div className="w-full space-y-6">
@@ -375,208 +389,229 @@ export default function PlanForm() {
         <Button variant="ghost" size="icon" onClick={() => navigate(`/platforms/${platformId}/plans`)}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <h1 className="text-2xl font-bold">{isEditMode ? 'Editar Plan de Suscripción' : 'Crear Nuevo Plan'}</h1>
+        <div>
+          <h1 className="text-2xl font-bold">{isEditMode ? `Editar Plan: ${plan.name}` : 'Crear Nuevo Plan'}</h1>
+          <p className="text-muted-foreground">Gestiona las configuraciones de este plan para cada país.</p>
+        </div>
       </div>
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Detalles del Plan</CardTitle>
-              <CardDescription>Define los detalles básicos, límites y precios de características para este plan.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Tabs defaultValue="general" className="w-full">
-                <TabsList>
-                  <TabsTrigger value="general">General</TabsTrigger>
-                  <TabsTrigger value="assets">Activos y Límites</TabsTrigger>
-                  {isEditMode && <TabsTrigger value="pricing">Tarifas y Precios</TabsTrigger>}
-                </TabsList>
 
-                {/* Pestaña General */}
-                <TabsContent value="general" className="pt-6">
-                  <div className="space-y-6">
-                    <FormField control={form.control} name="name" render={({ field }) => ( <FormItem><FormLabel>Nombre del Plan</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    <FormField control={form.control} name="description" render={({ field }) => ( <FormItem><FormLabel>Descripción</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem> )} />
-                    <FormField control={form.control} name="is_active" render={({ field }) => ( <FormItem className="flex items-center gap-2 pt-2"><FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl><FormLabel>Activo</FormLabel></FormItem> )} />
-                  </div>
-                </TabsContent>
-
-                {/* Pestaña Activos y Límites */}
-                <TabsContent value="assets" className="pt-6">
-                  <div className="space-y-6">
-                    {availableAssets.length > 0 ? availableAssets.map(asset => (
-                      <div key={asset.id} className="p-4 border rounded-md space-y-4">
-                        <div className="flex flex-col">
-                          <h4 className="font-semibold">{asset.name}</h4>
-                          {asset.description && <p className="text-sm text-muted-foreground">{asset.description}</p>}
-                        </div>
-                        
-                        {asset.data_type === 'boolean' ? (
-                          <FormField
-                            control={form.control}
-                            name={`assets.${asset.asset_key}.value`}
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                                <div className="space-y-0.5"><FormLabel>Habilitado</FormLabel></div>
-                                <FormControl><Checkbox checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <FormField control={form.control} name={`assets.${asset.asset_key}.value`} render={({ field }) => ( <FormItem><FormLabel>Límite Incluido</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`assets.${asset.asset_key}.extra_unit_price`} render={({ field }) => ( <FormItem><FormLabel>Precio Unitario Extra</FormLabel><FormControl><Input type="number" step="0.01" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                            <FormField control={form.control} name={`assets.${asset.asset_key}.overage_unit_price`} render={({ field }) => ( <FormItem><FormLabel>Precio Excedente</FormLabel><FormControl><Input type="number" step="0.0001" {...field} /></FormControl><FormMessage /></FormItem> )} />
-                          </div>
-                        )}
-                        {asset.data_type === 'numeric' && (
-                          <div>
-                            <h5 className="font-medium text-sm mb-2">Bonificación por Unidad Extra</h5>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-3 border rounded-md">
-                              <FormItem>
-                                <FormLabel>Activo a Bonificar</FormLabel>
-                                <Select
-                                  value={bonuses[asset.id]?.targetAssetKey || ''}
-                                  onValueChange={(value) => {
-                                    const newTarget = value === 'none' ? '' : value;
-                                    setBonuses(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], targetAssetKey: newTarget }}));
-                                  }}
-                                >
-                                  <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar activo..." /></SelectTrigger></FormControl>
-                                  <SelectContent>
-                                    <SelectItem value="none">Ninguno</SelectItem>
-                                    {availableAssets.filter(a => a.id !== asset.id && a.data_type === 'numeric').map(bonusAsset => ( <SelectItem key={bonusAsset.id} value={bonusAsset.asset_key}>{bonusAsset.name}</SelectItem> ))}
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                              <FormItem>
-                                <FormLabel>Cantidad Bonificada</FormLabel>
-                                <FormControl><Input type="number" value={bonuses[asset.id]?.quantity || ''} onChange={(e) => { const quantity = e.target.value === '' ? '' : parseInt(e.target.value, 10); setBonuses(prev => ({ ...prev, [asset.id]: { ...prev[asset.id], quantity }})); }} placeholder="Ej: 500" disabled={!bonuses[asset.id]?.targetAssetKey} /></FormControl>
-                              </FormItem>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )) : <p className="text-sm text-muted-foreground">No hay activos definidos para esta plataforma. Ve al Catálogo de Activos para añadirlos.</p>}
-                  </div>
-                </TabsContent>
-
-                {/* Pestaña Tarifas y Precios */}
-                {isEditMode && (
-                  <TabsContent value="pricing" className="pt-6">
-                    <div className="space-y-4">
-                       <Card>
-                         <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle>Gestión de Tarifas</CardTitle>
-                                    <CardDescription>Consulta las tarifas activas y programa cambios de precios a futuro.</CardDescription>
-                                </div>
-                                <Button type="button" variant="outline" onClick={handleOpenPriceDialog}>
-                                    <ScrollText className="mr-2 h-4 w-4" />
-                                    Programar Nueva Tarifa
-                                </Button>
-                            </div>
-                         </CardHeader>
-                         <CardContent className="p-4 space-y-4">
-                           <div>
-                             <p className="font-semibold">Tarifa Actual (Desde {currentTariff ? new Date(currentTariff.effective_date).toLocaleDateString() : 'N/A'}):</p>
-                             <span>{isLoadingTariffs ? 'Cargando...' : `Precio Base: ${currentTariff?.base_price ?? 'No definido'} COP`}</span>
-                           </div>
-                           <div>
-                             <p className="font-semibold">Próximas Tarifas Programadas:</p>
-                             {isLoadingTariffs ? <p>Cargando...</p> : (
-                               <ul className="list-disc pl-5">
-                                 {futureTariffs.map(t => ( <li key={t.id}>{`Desde ${new Date(t.effective_date).toLocaleDateString()}: ${t.base_price} COP`}</li> ))}
-                               </ul>
-                             )}
-                           </div>
-                         </CardContent>
-                       </Card>
-                    </div>
-                  </TabsContent>
-                )}
-              </Tabs>
-            </CardContent>
-          </Card>
-          <div className="flex justify-end">
-            <Button type="submit" disabled={loading || isScheduling}>
-              {loading ? 'Guardando...' : (isEditMode ? 'Guardar Cambios' : 'Crear Plan')}
-            </Button>
-          </div>
-        </form>
-      </Form>
-
-      {/* --- Dialog for Scheduling New Tariff --- */}
-      <Dialog open={isPriceDialogOpen} onOpenChange={setIsPriceDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>Programar Nueva Tarifa</DialogTitle></DialogHeader>
-          {futureTariffDetails && (
-            <div className="space-y-4 py-4 max-h-[70vh] overflow-y-auto pr-4">
-              <p className="text-sm text-muted-foreground">
-                Define los precios que entrarán en vigor en una fecha futura. Estos cambios no afectarán a la tarifa actual.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="newBasePrice">Nuevo Precio Base (COP)</Label>
-                  <Input 
-                    id="newBasePrice"
-                    type="number" 
-                    value={futureTariffDetails.base_price} 
-                    onChange={e => setFutureTariffDetails(prev => ({...prev!, base_price: e.target.value === '' ? '' : Number(e.target.value)}))} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="newEffectiveDate">Fecha de Efectividad</Label>
-                  <Input 
-                    id="newEffectiveDate"
-                    type="date" 
-                    value={futureTariffDetails.effective_date} 
-                    onChange={e => setFutureTariffDetails(prev => ({...prev!, effective_date: e.target.value}))} 
-                  />
-                </div>
-              </div>
-              <Separator />
-              <h4 className="text-md font-medium">Precios de Activos para esta Tarifa</h4>
-              <div className="space-y-4">
-                {availableAssets.filter(a => a.data_type === 'numeric').map(asset => (
-                  <div key={asset.id} className="p-3 border rounded-md">
-                    <p className="font-semibold">{asset.name}</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <div className="space-y-2">
-                        <Label htmlFor={`extra_price_${asset.id}`}>Precio Unitario Extra</Label>
-                        <Input 
-                          id={`extra_price_${asset.id}`}
-                          type="number"
-                          step="0.01"
-                          value={futureTariffDetails.asset_prices[asset.id]?.extra_unit_price ?? ''}
-                          onChange={e => handleFuturePriceChange(asset.id, 'extra_unit_price', e.target.value)}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor={`overage_price_${asset.id}`}>Precio Excedente</Label>
-                        <Input 
-                          id={`overage_price_${asset.id}`}
-                          type="number"
-                          step="0.0001"
-                          value={futureTariffDetails.asset_prices[asset.id]?.overage_unit_price ?? ''}
-                          onChange={e => handleFuturePriceChange(asset.id, 'overage_unit_price', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      <div className="space-y-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Detalles Generales</CardTitle>
+            <CardDescription>El nombre y la descripción son compartidos en todos los países.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="plan-name">Nombre del Plan</Label>
+              <Input 
+                id="plan-name"
+                value={plan.name}
+                onChange={(e) => handlePlanDetailsChange('name', e.target.value)}
+              />
             </div>
-          )}
-          <DialogFooter>
-            <DialogClose asChild><Button variant="ghost">Cancelar</Button></DialogClose>
-            <Button onClick={handleScheduleTariff} disabled={isScheduling}>
-              {isScheduling ? 'Programando...' : 'Confirmar y Programar'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-2">
+              <Label htmlFor="plan-description">Descripción</Label>
+              <Textarea 
+                id="plan-description"
+                value={plan.description}
+                onChange={(e) => handlePlanDetailsChange('description', e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {isEditMode && <PriceHistoryCard planId={planId} />}
+        
+        {isEditMode && <ScheduleNewPriceCard planId={planId} configurations={configurations} selectedCountryId={selectedCountryId} />}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Configuraciones por País</CardTitle>
+            <CardDescription>Selecciona un país para ver y editar la configuración del plan.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <Select value={selectedCountryId} onValueChange={setSelectedCountryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecciona un país..." />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map(country => (
+                  <SelectItem key={country.id} value={country.id}>
+                    {country.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {selectedCountryId && configurations[selectedCountryId] && (
+              <div className="space-y-6 pt-6">
+                {/* Features Section */}
+                <div className="p-4 border rounded-md">
+                  <h4 className="font-semibold mb-4">Características (Features) para {countries.find(c => c.id === selectedCountryId)?.name}</h4>
+                  <div className="space-y-2">
+                    {configurations[selectedCountryId].features.map((feature, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <Input 
+                          value={feature}
+                          onChange={(e) => handleFeatureChange(selectedCountryId, index, e.target.value)}
+                          placeholder="Ej: Soporte 24/7"
+                        />
+                        <Button variant="ghost" size="icon" onClick={() => removeFeature(selectedCountryId, index)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                  <Button variant="outline" size="sm" className="mt-4" onClick={() => addFeature(selectedCountryId)}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Añadir Característica
+                  </Button>
+                </div>
+
+                {/* Asset Limits Section */}
+                <div className="p-4 border rounded-md">
+                  <h4 className="font-semibold mb-4">Límites de Activos para {countries.find(c => c.id === selectedCountryId)?.name}</h4>
+                  <div className="space-y-4">
+                    {configurations[selectedCountryId].asset_limits.map(limit => {
+                      const asset = availableAssets.find(a => a.id === limit.asset_id);
+                      if (!asset) return null;
+
+                      return (
+                        <div key={asset.id} className="p-3 border rounded-md bg-white space-y-4">
+                          <div>
+                            <p className="font-medium">{asset.name}</p>
+                            {asset.description && <p className="text-sm text-muted-foreground mb-2">{asset.description}</p>}
+                            {asset.data_type === 'boolean' ? (
+                              <div className="flex items-center gap-2 pt-2">
+                                <Checkbox 
+                                  checked={limit.value === 'true'}
+                                  onCheckedChange={(checked) => handleAssetLimitChange(selectedCountryId, asset.id, 'value', String(checked))}
+                                />
+                                <Label>Habilitado</Label>
+                              </div>
+                            ) : (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+                                <div className="space-y-1">
+                                  <Label>Límite Incluido</Label>
+                                  <Input 
+                                    type="number"
+                                    value={limit.value}
+                                    onChange={(e) => handleAssetLimitChange(selectedCountryId, asset.id, 'value', e.target.value)}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label>Precio Unitario Extra</Label>
+                                  <Input 
+                                    type="number"
+                                    step="0.01"
+                                    value={limit.extra_unit_price}
+                                    onChange={(e) => handleAssetLimitChange(selectedCountryId, asset.id, 'extra_unit_price', parseFloat(e.target.value) || 0)}
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label>Precio Excedente</Label>
+                                  <Input 
+                                    type="number"
+                                    step="0.0001"
+                                    value={limit.overage_unit_price}
+                                    onChange={(e) => handleAssetLimitChange(selectedCountryId, asset.id, 'overage_unit_price', parseFloat(e.target.value) || 0)}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Bonus Management for Numeric Assets */}
+                          {asset.data_type === 'numeric' && (
+                            <div className="pt-4 space-y-2">
+                              <h5 className="font-semibold text-sm">Bonificaciones por compra extra</h5>
+                              {limit.bonuses && limit.bonuses.length > 0 ? (
+                                <div className="space-y-2 pl-2 border-l-2">
+                                  {limit.bonuses.map((bonus, index) => {
+                                    const bonusAsset = availableAssets.find(a => a.id === bonus.bonus_asset_id);
+                                    return (
+                                      <div key={index} className="flex items-center justify-between text-sm p-2 bg-slate-50 rounded-md">
+                                        <span>
+                                          +<span className="font-bold">{bonus.quantity}</span> de <span className="font-bold">{bonusAsset?.name || 'Activo no encontrado'}</span>
+                                        </span>
+                                        <Button variant="ghost" size="icon" onClick={() => handleRemoveBonus(asset.id, index)}>
+                                          <Trash2 className="h-4 w-4 text-red-500" />
+                                        </Button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground pl-2">No hay bonificaciones configuradas.</p>
+                              )}
+                              <Button variant="outline" size="sm" className="mt-2" onClick={() => openBonusDialog(asset.id)}>
+                                <PlusCircle className="h-4 w-4 mr-2" />
+                                Añadir Bonificación
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <Dialog open={bonusDialogState.isOpen} onOpenChange={(isOpen) => setBonusDialogState({ ...bonusDialogState, isOpen })}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Añadir Bonificación</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Activo a Bonificar</Label>
+                    <Select 
+                      value={currentBonus?.bonus_asset_id}
+                      onValueChange={(value) => setCurrentBonus(prev => prev ? { ...prev, bonus_asset_id: value } : null)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona un activo..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableAssets
+                          .filter(asset => asset.data_type === 'numeric' && asset.id !== bonusDialogState.sourceAssetId)
+                          .map(asset => (
+                            <SelectItem key={asset.id} value={asset.id}>
+                              {asset.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cantidad a Otorgar</Label>
+                    <Input 
+                      type="number"
+                      value={currentBonus?.quantity}
+                      onChange={(e) => setCurrentBonus(prev => prev ? { ...prev, quantity: parseInt(e.target.value) || 1 } : null)}
+                      min={1}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <DialogClose asChild>
+                    <Button variant="ghost">Cancelar</Button>
+                  </DialogClose>
+                  <Button onClick={handleSaveBonus}>Guardar Bonificación</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="flex justify-end">
+        <Button onClick={onSubmit} disabled={loading}>
+          {loading ? 'Guardando...' : 'Guardar Cambios'}
+        </Button>
+      </div>
     </div>
   );
 }
