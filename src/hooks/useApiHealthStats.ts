@@ -18,7 +18,7 @@ export interface ApiHealthStats {
 }
 
 const fetchApiHealthStats = async (): Promise<ApiHealthStats> => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action: 'get_api_health_stats' },
   });
 

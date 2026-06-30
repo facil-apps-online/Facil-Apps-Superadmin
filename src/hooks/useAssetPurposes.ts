@@ -19,7 +19,7 @@ export const useAssetPurposes = () => {
   const fetchPurposes = async () => {
     setIsLoading(true);
     setError(null);
-    const { data: purposes, error } = await supabase.functions.invoke('superadmin-actions', {
+    const { data: purposes, error } = await supabase.functions.invoke('core-actions', {
       body: { action: 'get_asset_purposes' }
     });
 
@@ -46,7 +46,7 @@ export const useCreateAssetPurpose = () => {
   const mutate = async (newPurpose: { purpose_key: string; description: string | null }) => {
     setIsPending(true);
     setError(null);
-    const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    const { data, error } = await supabase.functions.invoke('core-actions', {
       body: { action: 'create_asset_purpose', payload: { purposeData: newPurpose } }
     });
 
@@ -71,8 +71,7 @@ export const useUpdateAssetPurpose = () => {
     setIsPending(true);
     setError(null);
     const { purposeId, ...purposeData } = { purposeId: updatedPurpose.id, purposeData: { purpose_key: updatedPurpose.purpose_key, description: updatedPurpose.description } };
-    const { data, error } = await supabase.functions.invoke('superadmin-actions', {
-      body: { action: 'update_asset_purpose', payload: { purposeId, purposeData } }
+    const { data, error } = await supabase.functions.invoke('core-actions', {
     });
 
     if (error) {
@@ -95,7 +94,7 @@ export const useDeleteAssetPurpose = () => {
   const mutate = async (id: string) => {
     setIsPending(true);
     setError(null);
-    const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+    const { data, error } = await supabase.functions.invoke('core-actions', {
       body: { action: 'delete_asset_purpose', payload: { purposeId: id } }
     });
 

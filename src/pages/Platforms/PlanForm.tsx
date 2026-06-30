@@ -218,26 +218,46 @@ export default function PlanForm() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!planId || !platformId) {
+      if (!platformId) {
         setLoading(false);
         return;
       }
       setLoading(true);
       try {
-        const [{ data: planDetails, error: planError }, { data: assets, error: assetsError }] = await Promise.all([
-          supabase.functions.invoke('superadmin-actions', { body: { action: 'get_plan_details', payload: { planId } } }),
-          supabase.functions.invoke('superadmin-actions', { body: { action: 'get_plan_assets_by_platform', payload: { platformId } } })
-        ]);
+        let allCountries: Country[] = [];
+        let fetchedAssets: PlanAsset[] = [];
+        let backendConfigs: Record<string, CountryConfiguration> = {};
 
-        if (planError) throw planError;
-        if (assetsError) throw assetsError;
+        if (isEditMode) {
+          const [{ data: planDetails, error: planError }, { data: assets, error: assetsError }] = await Promise.all([
+            supabase.functions.invoke('core-actions', { body: { action: 'get_plan_details', payload: { planId } } }),
+            supabase.functions.invoke('core-actions', { body: { action: 'get_plan_assets_by_platform', payload: { platformId } } })
+          ]);
 
-        setPlan(planDetails.plan);
-        const allCountries = planDetails.countries || [];
+          if (planError) throw planError;
+          if (assetsError) throw assetsError;
+
+          setPlan(planDetails.plan);
+          allCountries = planDetails.countries || [];
+          fetchedAssets = assets || [];
+          backendConfigs = planDetails.configurations || {};
+        } else {
+          const [{ data: countriesData, error: countriesError }, { data: assets, error: assetsError }] = await Promise.all([
+            supabase.functions.invoke('core-actions', { body: { action: 'get_countries_for_platform', payload: { platformId } } }),
+            supabase.functions.invoke('core-actions', { body: { action: 'get_plan_assets_by_platform', payload: { platformId } } })
+          ]);
+
+          if (countriesError) throw countriesError;
+          if (assetsError) throw assetsError;
+
+          allCountries = countriesData || [];
+          fetchedAssets = assets || [];
+          setPlan({ id: '', name: '', description: '' });
+        }
+
         setCountries(allCountries);
-        setAvailableAssets(assets || []);
+        setAvailableAssets(fetchedAssets);
 
-        const backendConfigs = planDetails.configurations || {};
         const newConfigs: Record<string, CountryConfiguration> = {};
 
         allCountries.forEach((country: Country) => {
@@ -250,7 +270,7 @@ export default function PlanForm() {
           } else {
             countryConfig = {
               id: null,
-              plan_id: planId,
+              plan_id: planId || '',
               country_id: countryId,
               features: [],
               asset_limits: []
@@ -259,7 +279,7 @@ export default function PlanForm() {
 
           const existingLimits = countryConfig.asset_limits || [];
           const existingAssetIds = new Set(existingLimits.map((l: AssetLimit) => l.asset_id));
-          const missingAssets = (assets || []).filter((asset: PlanAsset) => !existingAssetIds.has(asset.id));
+          const missingAssets = fetchedAssets.filter((asset: PlanAsset) => !existingAssetIds.has(asset.id));
 
           countryConfig.asset_limits = [
             ...existingLimits,
@@ -280,9 +300,12 @@ export default function PlanForm() {
         if (allCountries.length > 0) {
           setSelectedCountryId(allCountries[0].id);
         }
-
-      } catch (err: any) {
-        toast({ title: "Error al cargar datos", description: err.message, variant: "destructive" });
+      } catch (error: any) {
+        toast({
+          title: "Error al cargar datos",
+          description: error.message,
+          variant: "destructive",
+        });
       } finally {
         setLoading(false);
       }
@@ -363,14 +386,31 @@ export default function PlanForm() {
   };
 
   const onSubmit = async () => {
-    if (!planId || !plan) return;
+    if (!plan) return;
     setLoading(true);
     try {
-      await supabase.functions.invoke('superadmin-actions', { body: { action: 'update_subscription_plan', payload: { planId, planData: { name: plan.name, description: plan.description } } } });
+      let currentPlanId = planId;
 
-      await supabase.functions.invoke('superadmin-actions', { body: { action: 'update_plan_details', payload: { planId, configurations } } });
+      if (isEditMode) {
+        if (!currentPlanId) return;
+        const { error: updateError } = await supabase.functions.invoke('core-actions', { 
+            body: { action: 'update_subscription_plan', payload: { planId: currentPlanId, planData: { name: plan.name, description: plan.description } } } 
+        });
+        if (updateError) throw updateError;
+      } else {
+        const { data: newPlan, error: createError } = await supabase.functions.invoke('core-actions', { 
+            body: { action: 'create_subscription_plan', payload: { planData: { name: plan.name, description: plan.description, platform_id: platformId } } } 
+        });
+        if (createError) throw createError;
+        currentPlanId = newPlan.id;
+      }
 
-      toast({ title: "Plan actualizado con éxito" });
+      const { error: detailsError } = await supabase.functions.invoke('core-actions', { 
+          body: { action: 'update_plan_details', payload: { planId: currentPlanId, configurations } } 
+      });
+      if (detailsError) throw detailsError;
+
+      toast({ title: isEditMode ? "Plan actualizado con éxito" : "Plan creado con éxito" });
       navigate(`/platforms/${platformId}/plans`);
 
     } catch (err: any) {

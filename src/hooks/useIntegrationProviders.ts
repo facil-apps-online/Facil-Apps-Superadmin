@@ -61,9 +61,7 @@ export const useIntegrationProvider = (id: string | undefined) => {
 
     queryFn: async () => {
 
-      if (!id) return undefined;
-
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+            const { data, error } = await supabase.functions.invoke('core-actions', {
 
         body: { action: 'get_integration_provider', payload: { id } },
 
@@ -97,7 +95,7 @@ export const useUpsertIntegrationProvider = () => {
 
     mutationFn: async (provider: Partial<IntegrationProvider>) => {
 
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
 
         body: { action: 'upsert_integration_provider', payload: { provider } },
 

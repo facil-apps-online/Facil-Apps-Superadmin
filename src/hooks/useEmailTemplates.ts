@@ -23,7 +23,7 @@ export const usePlatformEmailTemplates = (platformId: string) => {
   return useQuery<EmailTemplate[], Error>({
     queryKey: ['emailTemplates', 'platform', platformId],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'get_platform_email_templates', payload: { platformId } },
       });
       if (error) throw error;
@@ -39,7 +39,7 @@ export const useSuperadminCreateEmailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { templateData: Omit<EmailTemplate, 'id' | 'created_at' | 'updated_at'>, ownerTenantId: string }) => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'create_platform_email_template', payload },
       });
       if (error) throw error;
@@ -56,7 +56,7 @@ export const useSuperadminUpdateEmailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { templateId: string, templateData: Partial<EmailTemplate> }) => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'update_platform_email_template', payload },
       });
       if (error) throw error;
@@ -75,7 +75,7 @@ export const useDeleteEmailTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { templateId: string, platformId: string }) => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'delete_platform_email_template', payload },
       });
       if (error) throw error;

@@ -2,11 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useTenants, useDeleteTenant, useSetSystemOwner } from '@/hooks/useSuperadminTenants';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { PlusCircle, Trash2, Edit, Search, Eye } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Search, Eye, ArrowLeft } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useScreenSize } from '@/hooks/useScreenSize';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -28,6 +28,7 @@ import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments
 
 export default function TenantsList() {
   const { platformId: platformIdFromParams } = useParams<{ platformId: string }>();
+  const navigate = useNavigate(); // Initialize useNavigate hook
   const [searchTerm, setSearchTerm] = useState('');
   const [platformId, setPlatformId] = useState<string | undefined>(platformIdFromParams);
   const debouncedSearchTerm = useDebounce(searchTerm, 300);
@@ -56,9 +57,8 @@ export default function TenantsList() {
     return (assignedPlatforms || []).map(p => ({ value: p.id, label: p.name }));
   }, [assignedPlatforms]);
 
-  const { data: allTenants, isLoading, isError, error } = useTenants({ 
+  const { data: allTenants, isLoading, isError, error } = useTenants({
     searchTerm: debouncedSearchTerm,
-    platformId: role === 'super_admin' ? platformId : undefined
   });
 
   const tenants = useMemo(() => {
@@ -128,7 +128,14 @@ export default function TenantsList() {
     <>
       <div className="w-full">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold">{platformIdFromParams ? `Tenants de ${platformName}` : 'Listado de Tenants'}</h1>
+          <div className="flex items-center gap-4">
+            {platformIdFromParams && (
+                <Button variant="ghost" size="icon" onClick={() => navigate('/platforms')}>
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
+            )}
+            <h1 className="text-2xl font-bold">{platformIdFromParams ? `Tenants de ${platformName}` : 'Listado de Tenants'}</h1>
+          </div>
           {role === 'super_admin' && (
             <Button asChild>
               <Link to="/tenants/create">
@@ -170,7 +177,15 @@ export default function TenantsList() {
         ) : tenants && tenants.length > 0 ? (
           screenSize === 'mobile' ? (
             <div className="space-y-4">
-              {tenants.map((tenant) => (
+              {tenants.map((tenant) => {
+                const detailPath = platformIdFromParams
+                  ? `/platforms/${platformIdFromParams}/tenants/${tenant.id}`
+                  : `/tenants/${tenant.id}`;
+                const editPath = platformIdFromParams
+                  ? `/platforms/${platformIdFromParams}/tenants/${tenant.id}/edit`
+                  : `/tenants/${tenant.id}/edit`;
+
+                return (
                 <Card key={tenant.id}>
                   <CardHeader>
                     <CardTitle>{tenant.name}</CardTitle>
@@ -198,16 +213,16 @@ export default function TenantsList() {
                     )}
                   </CardContent>
                   <CardFooter className="flex justify-end gap-2">
-                    <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}`}><Eye className="mr-2 h-4 w-4" /> Ver</Link></Button>
+                    <Button variant="outline" size="sm" asChild><Link to={detailPath}><Eye className="mr-2 h-4 w-4" /> Ver</Link></Button>
                     {role === 'super_admin' && (
                         <>
-                        <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
+                        <Button variant="outline" size="sm" asChild><Link to={editPath}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
                         <Button variant="destructive" size="icon" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="h-4 w-4" /></Button>
                         </>
                     )}
                   </CardFooter>
                 </Card>
-              ))}
+              )})}
             </div>
           ) : (
             <Table>
@@ -222,40 +237,49 @@ export default function TenantsList() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tenants.map((tenant) => (
-                  <TableRow key={tenant.id}>
-                    <TableCell className="font-medium">{tenant.name}</TableCell>
-                    {!platformIdFromParams && <TableCell>{tenant.platform?.name || 'N/A'}</TableCell>}
-                    {role === 'super_admin' && (
-                        <TableCell>
-                        <Switch
-                            checked={!!tenant.is_system_owner}
-                            onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
-                            disabled={setSystemOwnerMutation.isPending}
-                            aria-label={`Marcar a ${tenant.name} como propietario del sistema`}
-                        />
-                        </TableCell>
-                    )}
-                    <TableCell><Badge variant={getStatusVariant(tenant.subscription_status)}>{tenant.subscription_status}</Badge></TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {tenant.countries?.iso_code ? (
-                          <img src={`https://flagcdn.com/w20/${tenant.countries.iso_code.toLowerCase()}.png`} alt={`Bandera de ${tenant.countries.name}`} className="w-5 h-auto" />
-                        ) : <span className="w-5 h-3"></span>}
-                        <span>{tenant.countries?.name || 'N/A'}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="outline" size="sm" asChild><Link to={`/tenants/${tenant.id}`}><Eye className="mr-2 h-4 w-4" /> Ver Detalles</Link></Button>
+                {tenants.map((tenant) => {
+                  const detailPath = platformIdFromParams
+                    ? `/platforms/${platformIdFromParams}/tenants/${tenant.id}`
+                    : `/tenants/${tenant.id}`;
+                  const editPath = platformIdFromParams
+                    ? `/platforms/${platformIdFromParams}/tenants/${tenant.id}/edit`
+                    : `/tenants/${tenant.id}/edit`;
+
+                  return (
+                    <TableRow key={tenant.id}>
+                      <TableCell className="font-medium">{tenant.name}</TableCell>
+                      {!platformIdFromParams && <TableCell>{tenant.platform?.name || 'N/A'}</TableCell>}
                       {role === 'super_admin' && (
-                        <>
-                            <Button variant="outline" size="sm" asChild className="ml-2"><Link to={`/tenants/${tenant.id}/edit`}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
-                            <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="mr-2 h-4 w-4" /> Borrar</Button>
-                        </>
+                          <TableCell>
+                          <Switch
+                              checked={!!tenant.is_system_owner}
+                              onCheckedChange={() => handleOwnerChange(tenant.id, tenant.platform?.id)}
+                              disabled={setSystemOwnerMutation.isPending}
+                              aria-label={`Marcar a ${tenant.name} como propietario del sistema`}
+                          />
+                          </TableCell>
                       )}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      <TableCell><Badge variant={getStatusVariant(tenant.subscription_status)}>{tenant.subscription_status}</Badge></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {tenant.countries?.iso_code ? (
+                            <img src={`https://flagcdn.com/w20/${tenant.countries.iso_code.toLowerCase()}.png`} alt={`Bandera de ${tenant.countries.name}`} className="w-5 h-auto" />
+                          ) : <span className="w-5 h-3"></span>}
+                          <span>{tenant.countries?.name || 'N/A'}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" asChild><Link to={detailPath}><Eye className="mr-2 h-4 w-4" /> Ver Detalles</Link></Button>
+                        {role === 'super_admin' && (
+                          <>
+                              <Button variant="outline" size="sm" asChild className="ml-2"><Link to={editPath}><Edit className="mr-2 h-4 w-4" /> Editar</Link></Button>
+                              <Button variant="destructive" size="sm" className="ml-2" onClick={() => handleDeleteRequest(tenant.id, tenant.name)} disabled={deleteTenantMutation.isPending}><Trash2 className="mr-2 h-4 w-4" /> Borrar</Button>
+                          </>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )

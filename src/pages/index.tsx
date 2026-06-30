@@ -8,6 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePriceFormat } from '@/hooks/usePriceFormat';
 import { SearchableSelect } from '@/components/ui/searchable-select';
+import { usePlatformsStats } from '@/hooks/usePlatformsStats';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function SuperadminDashboard() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -15,6 +17,7 @@ export default function SuperadminDashboard() {
 
   const { data: stats, isLoading, isError, error, isSuccess } = useFinancialStats(platformId);
   const { data: platforms, isLoading: isLoadingPlatforms } = usePlatforms();
+  const { data: platformsStats, isLoading: isLoadingPlatformsStats } = usePlatformsStats();
   const { formatPrice } = usePriceFormat();
 
   const platformOptions = useMemo(() => {
@@ -105,13 +108,31 @@ export default function SuperadminDashboard() {
                 <StatsCard title="Pagos (Últimos 30 días)" value={stats.payments_last_30_days ?? 0} icon={CreditCard} tooltip="Número total de pagos completados en los últimos 30 días." />
             </div>
 
-            {/* Gráficos (Próximamente) */}
+            {/* Gráficos */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Gráficos y Visualizaciones</CardTitle>
+                    <CardTitle>Rendimiento por Plataforma</CardTitle>
                 </CardHeader>
-                <CardContent className="flex items-center justify-center h-[300px]">
-                    <p className="text-muted-foreground">Más gráficos y métricas vendrán aquí.</p>
+                <CardContent className="h-[350px] w-full">
+                    {isLoadingPlatformsStats ? (
+                        <div className="flex items-center justify-center h-full text-muted-foreground">Cargando gráfico...</div>
+                    ) : (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <BarChart
+                                data={platformsStats}
+                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" />
+                                <XAxis dataKey="platform_name" />
+                                <YAxis yAxisId="left" orientation="left" stroke="#8884d8" label={{ value: 'MRR ($)', angle: -90, position: 'insideLeft' }} />
+                                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" label={{ value: 'Suscripciones', angle: 90, position: 'insideRight' }}/>
+                                <Tooltip formatter={(value, name) => name === 'MRR' ? formatPrice(value as number) : value} />
+                                <Legend />
+                                <Bar yAxisId="left" dataKey="mrr" fill="#8884d8" name="MRR" />
+                                <Bar yAxisId="right" dataKey="active_subscriptions" fill="#82ca9d" name="Suscripciones Activas" />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </CardContent>
             </Card>
           </motion.div>

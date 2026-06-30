@@ -14,7 +14,7 @@ export default function CreatePlatform() {
   const handleSubmit = async (values: PlatformFormValues) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'create_platform', payload: values },
       });
 

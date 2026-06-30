@@ -41,7 +41,7 @@ export const usePlanPricing = (planId: string) => {
     queryKey: ['tariffs', planId],
     queryFn: async () => {
       if (!planId) return [];
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'get_tariffs_for_plan', payload: { planId } },
       });
       if (error) throw new Error(error.message);
@@ -53,7 +53,7 @@ export const usePlanPricing = (planId: string) => {
   // 2. Mutation para programar una nueva tarifa
   const { mutate: scheduleNewTariff, isPending: isScheduling } = useMutation({
     mutationFn: async (variables: { tariffData: NewTariffData, assetPricesData: NewAssetPriceData[] }) => {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { 
           action: 'schedule_new_tariff', 
           payload: { 

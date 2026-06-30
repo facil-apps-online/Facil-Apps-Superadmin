@@ -14,7 +14,8 @@ export interface Tenant {
   subscription_status: string;
   created_at: string;
   updated_at: string;
-  platform?: Platform | null; // <-- Added platform object
+  platform_id: string; // <-- Added explicit platform_id
+  platform?: Platform | null; 
   default_language_code?: string | null;
   default_currency_id?: string | null;
   default_timezone?: string | null;
@@ -50,7 +51,7 @@ interface TenantFilters {
 
 // Helper function to invoke the superadmin-actions Edge Function
 const invokeSuperadminAction = async (action: string, payload?: any) => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action, payload },
   });
   if (error) throw new Error(error.message);

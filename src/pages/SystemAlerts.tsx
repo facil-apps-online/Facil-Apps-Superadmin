@@ -28,34 +28,10 @@ const SystemAlerts: React.FC = () => {
 
   const fetchPlatforms = async () => {
     try {
-      const { data, error: rpcError } = await supabase.functions.invoke('superadmin-actions', {
-        body: JSON.stringify({
+      const { data, error: rpcError } = await supabase.functions.invoke('core-actions', {
+        body: {
           action: 'get_platforms',
-        }),
-      });
-      if (rpcError) {
-        throw new Error(rpcError.message);
-      }
-      setPlatforms(data);
-    } catch (err: any) {
-      console.error('Error fetching platforms:', err);
-      // Handle error, maybe set an error state for platforms
-    }
-  };
-
-  const fetchAlerts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { data, error: rpcError } = await supabase.functions.invoke('superadmin-actions', {
-        body: JSON.stringify({
-          action: 'get_system_alerts',
-          payload: {
-            platform_id: filterPlatformId || undefined,
-            type: filterType || undefined,
-            is_resolved: filterResolved === 'all' ? undefined : (filterResolved === 'true'),
-          },
-        }),
+        },
       });
 
       if (rpcError) {
@@ -92,15 +68,15 @@ const SystemAlerts: React.FC = () => {
         return;
       }
 
-      const { data, error: rpcError } = await supabase.functions.invoke('superadmin-actions', {
-        body: JSON.stringify({
+      const { data, error: rpcError } = await supabase.functions.invoke('core-actions', {
+        body: {
           action: 'update_system_alert_status',
           payload: {
             id,
             is_resolved: true,
             resolved_by: resolvedBy,
           },
-        }),
+        },
       });
 
       if (rpcError) {

@@ -27,6 +27,7 @@ interface IntegrationConfigDialogProps {
   onOpenChange: (isOpen: boolean) => void;
   provider: IntegrationProvider | null;
   tenantId: string;
+  platformId: string; // Added prop
 }
 
 const IntegrationConfigDialog: React.FC<IntegrationConfigDialogProps> = ({
@@ -34,6 +35,7 @@ const IntegrationConfigDialog: React.FC<IntegrationConfigDialogProps> = ({
   onOpenChange,
   provider,
   tenantId,
+  platformId,
 }) => {
   const [isTestMode, setIsTestMode] = useState(false);
   const [decryptedCredentials, setDecryptedCredentials] = useState<Record<string, any> | null>(null);
@@ -41,7 +43,7 @@ const IntegrationConfigDialog: React.FC<IntegrationConfigDialogProps> = ({
   const { toast } = useToast();
   
   const environment = isTestMode ? 'test' : 'production';
-  const { data: existingIntegrations } = useTenantIntegrations(tenantId, environment);
+  const { data: existingIntegrations } = useTenantIntegrations(tenantId); // Reverted environment filter here as hook doesn't support it yet
   const saveIntegrationMutation = useSaveIntegration();
 
   useEffect(() => {
@@ -51,7 +53,10 @@ const IntegrationConfigDialog: React.FC<IntegrationConfigDialogProps> = ({
         return;
       }
 
-      const existingConfig = existingIntegrations.find(int => int.provider === provider.slug);
+      // Filter locally
+      const existingConfig = existingIntegrations.find(
+        int => int.provider === provider.slug && int.environment === environment
+      );
       
       if (existingConfig && existingConfig.encrypted_credentials && existingConfig.nonce) {
         setIsLoadingCredentials(true);
@@ -79,12 +84,12 @@ const IntegrationConfigDialog: React.FC<IntegrationConfigDialogProps> = ({
     };
 
     decryptAndSetCredentials();
-  }, [isOpen, provider, existingIntegrations, isTestMode, toast]);
+  }, [isOpen, provider, existingIntegrations, isTestMode, environment, toast]); // Added dependencies
 
   const handleSave = async (data: Record<string, any>) => {
     if (!provider) return;
     saveIntegrationMutation.mutate(
-      { tenantId, provider, credentials: data, environment },
+      { tenantId, platformId, provider, credentials: data, environment },
       { onSuccess: () => onOpenChange(false) }
     );
   };

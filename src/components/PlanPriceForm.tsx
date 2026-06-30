@@ -42,7 +42,7 @@ export function PlanPriceForm({ planId, onPriceScheduled }: PlanPriceFormProps) 
       };
 
       // We will create a new 'schedule_new_price' action
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'schedule_new_price', payload: { priceData } },
       });
 

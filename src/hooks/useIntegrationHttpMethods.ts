@@ -8,7 +8,7 @@ export interface IntegrationHttpMethod {
 }
 
 const fetchIntegrationHttpMethods = async (): Promise<IntegrationHttpMethod[]> => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action: 'get_integration_http_methods' },
   });
 

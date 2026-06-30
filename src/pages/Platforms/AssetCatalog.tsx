@@ -54,7 +54,7 @@ export default function AssetCatalog() {
     if (!platformId) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'get_plan_assets_by_platform', payload: { platformId } },
       });
       if (error) throw error;
@@ -83,7 +83,7 @@ export default function AssetCatalog() {
         ? { assetId: editingAsset.id, assetData: values }
         : { assetData: { ...values, platform_id: platformId } };
 
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { action, payload },
       });
       if (error) throw error;
@@ -98,7 +98,7 @@ export default function AssetCatalog() {
 
   const handleDelete = async (assetId: string) => {
     try {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'delete_plan_asset', payload: { assetId } },
       });
       if (error) throw error;

@@ -10,7 +10,7 @@ export interface UpdateUserPayload {
 
 // --- Helper Function ---
 const invokeSuperadminAction = async (action: string, payload?: any) => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action, payload },
   });
   if (error) throw new Error(error.message);

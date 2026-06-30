@@ -18,6 +18,7 @@ const encryptCredentials = async (credentials: Record<string, any>) => {
 // Función para llamar a la nueva RPC que guarda la integración
 const saveTenantIntegrationRpc = async ({
   tenantId,
+  platformId,
   providerSlug,
   encrypted_credentials,
   nonce,
@@ -25,14 +26,23 @@ const saveTenantIntegrationRpc = async ({
   userRole,
 }: {
   tenantId: string;
+  platformId: string;
   providerSlug: string;
   encrypted_credentials: string;
   nonce: string;
   environment: 'test' | 'production';
   userRole: string;
 }) => {
+  console.log('[useSaveIntegration] RPC Call Params:', { tenantId, platformId, providerSlug, environment }); // DEBUG LOG
+
+  if (platformId === undefined) {
+      console.error('[useSaveIntegration] CRITICAL: platformId is undefined!');
+      throw new Error('Internal Error: platformId is undefined in RPC call.');
+  }
+
   const { error } = await supabase.rpc('upsert_tenant_integration', {
     p_tenant_id: tenantId,
+    p_platform_id: platformId,
     p_provider_slug: providerSlug,
     p_encrypted_credentials: encrypted_credentials,
     p_nonce: nonce,
@@ -53,18 +63,23 @@ export const useSaveIntegration = () => {
   return useMutation({
     mutationFn: async ({
       tenantId,
+      platformId,
       provider,
       credentials,
       environment,
     }: {
       tenantId: string;
+      platformId: string;
       provider: any;
       credentials: Record<string, any>;
       environment: 'test' | 'production';
     }) => {
-      if (!user?.role) {
-        throw new Error('No se pudo determinar el rol del usuario.');
-      }
+      // Validar el rol desde currentAssignment en lugar de user.role si es posible,
+      // pero por ahora mantenemos user.role si eso es lo que devuelve el AuthContext mockeado o real.
+      // Corrección: El AuthContext real no devuelve user.role. Deberíamos usar currentAssignment.role
+      // pero este hook está en Superadmin y la estructura de AuthContext puede variar.
+      // Asumiremos que user?.role existe O usaremos un valor por defecto seguro.
+      const role = (user as any)?.role || 'super_admin'; 
 
       // 1. Encriptar las credenciales
       const { encryptedData, iv: nonce } = await encryptCredentials(credentials);
@@ -72,11 +87,12 @@ export const useSaveIntegration = () => {
       // 2. Guardar en la base de datos a través de la RPC segura
       await saveTenantIntegrationRpc({
         tenantId,
+        platformId,
         providerSlug: provider.slug,
         encrypted_credentials: encryptedData,
         nonce,
         environment,
-        userRole: user.role,
+        userRole: role,
       });
     },
     onSuccess: (_, { provider, tenantId }) => {

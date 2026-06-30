@@ -13,7 +13,7 @@ export const useIntegrationCategories = () => {
   return useQuery<IntegrationCategory[], Error>({
     queryKey: ['integrationCategories'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'get_integration_categories' },
       });
       if (error) throw new Error(error.message);
@@ -28,7 +28,7 @@ export const useUpsertIntegrationCategory = () => {
 
   return useMutation({
     mutationFn: async (category: Partial<IntegrationCategory>) => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'upsert_integration_category', payload: { category } },
       });
 
@@ -52,7 +52,7 @@ export const useDeleteIntegrationCategory = () => {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
+      const { error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'delete_integration_category', payload: { id } },
       });
 

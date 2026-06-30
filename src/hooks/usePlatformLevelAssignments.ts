@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabaseClient';
-import { useAuth } from '@/contexts/AuthContext'; // Import useAuth
+import { useAuth } from '@/contexts/AuthContext';
+import { invokeCoreAction } from '@/lib/api'; // Import the new centralized helper
 
 // --- Interfaces ---
 // Esta interfaz define la estructura de datos que el componente espera.
@@ -35,21 +35,9 @@ interface RemoveAssignmentPayload {
   platformId: string;
 }
 
-// --- Helper Function ---
-const invokeSuperadminAction = async (action: string, payload?: any) => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
-    body: { action, payload },
-  });
-  if (error) throw new Error(error.message);
-  if (data.success === false) {
-    throw new Error(data.message);
-  }
-  return data;
-};
-
 // --- GET Assignments ---
 const fetchPlatformLevelAssignments = async (): Promise<PlatformAssignment[]> => {
-  return invokeSuperadminAction('get_platform_level_assignments');
+  return invokeCoreAction('get_platform_level_assignments');
 };
 
 export const usePlatformLevelAssignments = () => {
@@ -61,34 +49,34 @@ export const usePlatformLevelAssignments = () => {
 
 // --- ASSIGN Role ---
 const assignPlatformRole = async (payload: AssignRolePayload): Promise<any> => {
-  return invokeSuperadminAction('assign_platform_role', payload);
+  return invokeCoreAction('assign_platform_role', payload);
 };
 
 export const useAssignPlatformRole = () => {
   const queryClient = useQueryClient();
-  const { refreshUser } = useAuth(); // Import useAuth
+  const { refreshUser } = useAuth();
   return useMutation<any, Error, AssignRolePayload>({
     mutationFn: assignPlatformRole,
-    onSuccess: async () => { // Make async
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
-      await refreshUser(); // Refresh user session
+      await refreshUser();
     },
   });
 };
 
 // --- REMOVE Assignment ---
 const removePlatformAssignment = async (payload: RemoveAssignmentPayload): Promise<any> => {
-  return invokeSuperadminAction('remove_platform_assignment', payload);
+  return invokeCoreAction('remove_platform_assignment', payload);
 };
 
 export const useRemovePlatformAssignment = () => {
   const queryClient = useQueryClient();
-  const { refreshUser } = useAuth(); // Import useAuth
+  const { refreshUser } = useAuth();
   return useMutation<any, Error, RemoveAssignmentPayload>({
     mutationFn: removePlatformAssignment,
-    onSuccess: async () => { // Make async
+    onSuccess: async () => {
       queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
-      await refreshUser(); // Refresh user session
+      await refreshUser();
     },
   });
 };

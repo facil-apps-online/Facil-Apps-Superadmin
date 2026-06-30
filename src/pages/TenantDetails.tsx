@@ -3,16 +3,14 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useTenantById } from '@/hooks/useSuperadminTenants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { TenantUsersManager } from '@/components/TenantUsersManager';
 import { TenantIntegrationManager } from './TenantIntegrationManager';
 import { TenantSubscriptionsManager } from '@/pages/TenantSubscriptionsManager';
-import { TenantInvoicesList } from '@/pages/TenantInvoicesList';
 // import { BranchesTab } from '../Settings/BranchesTab';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 
 export default function TenantDetails() {
-  const { tenantId } = useParams<{ tenantId: string }>();
+  const { tenantId, platformId } = useParams<{ tenantId: string; platformId?: string }>();
   const navigate = useNavigate();
 
   if (!tenantId) {
@@ -20,6 +18,14 @@ export default function TenantDetails() {
   }
 
   const { data: tenant, isLoading, isError, error } = useTenantById(tenantId);
+
+  const handleBack = () => {
+    if (platformId) {
+      navigate(`/platforms/${platformId}/tenants`);
+    } else {
+      navigate('/tenants');
+    }
+  };
 
   if (isLoading) {
     return <div className="p-4">Cargando detalles del tenant...</div>;
@@ -48,7 +54,7 @@ export default function TenantDetails() {
       </div>
       <div>
         <div className="font-semibold text-muted-foreground">País</div>
-        <div>{tenant?.countries?.name || 'No especificado'}</div>
+        <div>{tenant?.country?.name || 'No especificado'}</div>
       </div>
       <div>
         <div className="font-semibold text-muted-foreground">Estado de Suscripción</div>
@@ -74,7 +80,7 @@ export default function TenantDetails() {
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate('/tenants')}>
+        <Button variant="ghost" size="icon" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4" />
         </Button>
         <h1 className="text-2xl md:text-3xl font-bold">Detalles del Tenant</h1>
@@ -92,12 +98,11 @@ export default function TenantDetails() {
 
       <TenantSubscriptionsManager tenantId={tenantId} />
 
-      <TenantInvoicesList tenantId={tenantId} />
-
-      <TenantIntegrationManager tenantId={tenantId} />
+      <TenantIntegrationManager 
+        tenantId={tenantId} 
+        platformId={tenant?.platform_id || tenant?.platform?.id || ''} 
+      />
       
-      <TenantUsersManager tenantId={tenantId} />
-
       {/* <BranchesTab tenantId={tenantId} /> */}
     </div>
   );

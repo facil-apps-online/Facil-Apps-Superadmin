@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { usePlatforms } from '@/hooks/usePlatforms';
-import { supabase } from '@/lib/supabaseClient';
 import { Button } from "@/components/ui/button";
 import { Input } from '@/components/ui/input';
 import {
@@ -28,6 +27,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { PlusCircle, Edit, Trash2, BookKey, Package, Settings, Search, Users, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments';
+import { invokeCoreAction } from '@/lib/api';
 
 interface Platform {
   id: string;
@@ -74,11 +74,7 @@ export default function PlatformsList() {
   const confirmDelete = async () => {
     if (!deleteAlert.platformId || !deleteAlert.platformName) return;
     try {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'delete_platform', payload: { id: deleteAlert.platformId } },
-      });
-
-      if (error) throw new Error(error.message);
+      await invokeCoreAction('delete_platform', { id: deleteAlert.platformId });
 
       toast({
         title: "Plataforma eliminada",
@@ -134,7 +130,7 @@ export default function PlatformsList() {
                 <TableHead>Nombre</TableHead>
                 <TableHead>Descripción</TableHead>
                 <TableHead>URL Base</TableHead>
-                <TableHead>Acciones</TableHead>
+                <TableHead className="text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -145,7 +141,7 @@ export default function PlatformsList() {
                     <TableCell>{platform.description || 'N/A'}</TableCell>
                     <TableCell>{platform.base_url || 'N/A'}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-end gap-2">
                         {role === 'investor' ? (
                             <Button 
                                 variant="outline" 

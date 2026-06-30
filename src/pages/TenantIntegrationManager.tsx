@@ -2,11 +2,11 @@ import { useGlobalIntegrations } from '@/hooks/useGlobalIntegrations';
 import React, { useEffect, useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Power, PowerOff, Mail, FolderKanban, Send, Globe, Settings, AlertTriangle } from 'lucide-react';
+import { CheckCircle, Power, PowerOff, Mail, FolderKanban, Send, Globe, Settings, AlertTriangle, MessageSquare } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
-import { useTenantIntegrations, useDeleteIntegration, TenantIntegration } from '@/hooks/useTenantIntegrations';
+import { useTenantIntegrations, useDeleteIntegration } from '@/hooks/useTenantIntegrations';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +22,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from '@/contexts/AuthContext';
 import IntegrationConfigDialog from '@/components/IntegrationConfigDialog';
 import { Badge } from '@/components/ui/badge';
+import { TenantIntegration } from '@/hooks/useTenantIntegrations';
+
 
 // (El resto de los componentes auxiliares como useGoogleAuthUrl, IntegrationCard, etc., se mantienen igual)
 type Provider = 'google_drive' | 'google_gmail' | string;
@@ -159,252 +161,168 @@ const formatProviderName = (provider: Provider | null): string => {
 };
 
 
-
+const whatsappProvider = {
+    id: 'whatsapp-provider-manual', // A dummy ID
+    name: 'WhatsApp Business',
+    slug: 'meta_whatsapp',
+    logo_url: '', // I will use a Lucide icon instead
+    config_schema: [
+      { id: 'wa1', name: 'app_secret', label: 'Meta App Secret', type: 'password', required: true, helpText: 'El App Secret de tu aplicación de Meta.' },
+      { id: 'wa2', name: 'verify_token', label: 'Verify Token', type: 'text', required: true, helpText: 'El token de verificación para el webhook.' },
+      { id: 'wa3', name: 'access_token', label: 'Access Token', type: 'password', required: true, helpText: 'El token de acceso de la API de WhatsApp Business.' },
+      { id: 'wa4', name: 'phone_number_id', label: 'Phone Number ID', type: 'text', required: true, helpText: 'El ID del número de teléfono de WhatsApp.' },
+    ],
+    // other properties to make it compatible with IntegrationConfigDialog
+    country_id: '',
+    category_id: '',
+    status: 'active',
+    endpoints: { test: '', production: '' },
+    apiSchema: [],
+  };
 
 
 // Hook para la nueva mutación que activa una integración
-
 const useSetActiveIntegration = () => {
-
   const { user } = useAuth();
-
   const queryClient = useQueryClient();
-
   const { toast } = useToast();
 
-
-
   return useMutation<null, Error, { integrationId: string; tenantId: string }> ({
-
     mutationFn: async ({ integrationId }) => {
-
       const { error } = await supabase.rpc('set_active_integration', {
-
         p_integration_id: integrationId,
-
       });
 
-
-
       if (error) throw error;
-
       return null;
-
     },
-
     onSuccess: (_, variables) => {
-
       toast({ title: "Éxito", description: "La integración activa ha sido actualizada." });
-
       queryClient.invalidateQueries({ queryKey: ['tenantIntegrations', variables.tenantId] });
-
     },
-
     onError: (error) => {
-
       toast({ title: "Error", description: `No se pudo cambiar la integración activa: ${error.message}`, variant: "destructive" });
-
     },
-
   });
+};
 
+const useGetGoogleAuthUrl = () => {
+  const { toast } = useToast();
+
+  return useMutation<
+    { authUrl: string }, // Success response
+    Error, // Error type
+    { tenantId: string; provider: 'google_drive' | 'google_gmail'; finalRedirectUrl: string } // Variables
+  >({
+    mutationFn: async ({ tenantId, provider, finalRedirectUrl }) => {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
+        body: {
+          action: 'get-google-auth-url',
+          payload: { tenantId, provider, finalRedirectUrl },
+        },
+      });
+
+      if (error) throw new Error(error.message);
+      if (!data.authUrl) throw new Error('Could not retrieve the authorization URL.');
+      
+      return data;
+    },
+    onError: (error) => {
+      toast({
+        title: 'Error de Conexión',
+        description: `No se pudo obtener la URL de autorización de Google: ${error.message}`,
+        variant: 'destructive',
+      });
+    },
+  });
 };
 
 
-
-export const TenantIntegrationManager = ({ tenantId }: { tenantId: string }) => {
-
+export const TenantIntegrationManager = ({ tenantId, platformId }: { tenantId: string; platformId: string }) => {
+  console.log('TenantIntegrationManager rendered. Props:', { tenantId, platformId }); // DEBUG
   const { toast } = useToast();
-
   const queryClient = useQueryClient();
-
   const { data: integrations, isLoading, isError, error } = useTenantIntegrations(tenantId);
-
   const { data: globalIntegrationsData, isLoading: isLoadingProviders } = useGlobalIntegrations();
-
   const availableProviders = globalIntegrationsData?.providers;
-
   const disconnectMutation = useDeleteIntegration();
-
   const setActiveMutation = useSetActiveIntegration();
-
+  const getAuthUrlMutation = useGetGoogleAuthUrl();
 
 
   const [disconnectAlert, setDisconnectAlert] = useState<{ isOpen: boolean; provider: Provider | null; accountEmail: string | null; integrationId?: string }>({ isOpen: false, provider: null, accountEmail: null });
-
-  const [connectingProvider, setConnectingProvider] = useState<Provider | null>(null);
-
   const [isSendingTest, setIsSendingTest] = useState(false);
-
-  const [configProvider, setConfigProvider] = useState<IntegrationProvider | null>(null);
-
-
-
-  const { refetch: getDriveAuthUrl, isFetching: isFetchingDriveUrl } = useGoogleAuthUrl(tenantId, 'get_google_auth_url');
-
-  const { refetch: getGmailAuthUrl, isFetching: isFetchingGmailUrl } = useGoogleAuthUrl(tenantId, 'get_gmail_auth_url');
-
-
+  const [configProvider, setConfigProvider] = useState<any | null>(null);
 
   // Agrupar integraciones por proveedor
-
   const groupedIntegrations = integrations?.reduce((acc, int) => {
-
     if (int.provider.startsWith('google_')) return acc; // Excluir Google de la agrupación genérica
-
     if (!acc[int.provider]) {
-
       acc[int.provider] = [];
-
     }
-
     acc[int.provider].push(int);
-
     return acc;
-
   }, {} as Record<string, TenantIntegration[]>);
 
-
-
   const googleDriveIntegration = integrations?.find(int => int.provider === 'google_drive');
-
   const gmailIntegration = integrations?.find(int => int.provider === 'google_gmail');
-
+  const whatsappIntegration = integrations?.find(int => int.provider === 'meta_whatsapp');
 
 
   const unconfiguredProviders = availableProviders?.filter(
-
     provider => {
-
       if (!provider.slug || provider.status !== 'active' || provider.slug.startsWith('google_')) return false;
-
       return !groupedIntegrations || !groupedIntegrations[provider.slug];
-
     }
-
   );
 
-
-
-  // ... (el resto de los hooks y handlers como useEffect, handleConnect, etc. se mantienen)
-
   useEffect(() => {
-
     const handleAuthMessage = (event: MessageEvent) => {
-
-      if (event.origin !== window.location.origin) return;
-
-      const { type, success, error } = event.data;
-
-      if (type === 'google-auth-callback') {
-
-        const providerName = formatProviderName(connectingProvider);
-
-        if (success) {
-
-          toast({ title: 'Éxito', description: `La integración con ${providerName} se ha completado.` });
-
-          // Invalidar todas las consultas que coincidan con el inicio de la clave
-
-          queryClient.invalidateQueries({ 
-
-            predicate: query => 
-
-              query.queryKey[0] === 'tenantIntegrations' && 
-
-              query.queryKey[1] === tenantId 
-
-          });
-
-          queryClient.resetQueries({ queryKey: ['get_google_auth_url', tenantId] });
-
-          queryClient.resetQueries({ queryKey: ['get_gmail_auth_url', tenantId] });
-
-        } else {
-
-          toast({ title: 'Error de Autenticación', description: `No se pudo completar la integración con ${providerName}: ${error || 'Error desconocido.'}`, variant: 'destructive' });
-
-        }
-
-        setConnectingProvider(null);
-
+      // Security: Check the origin of the message
+      if (event.origin !== window.location.origin) {
+        console.warn(`Message from unexpected origin: ${event.origin}`);
+        return;
       }
 
+      const { type, provider, error } = event.data;
+      const providerName = formatProviderName(provider);
+
+      if (type === 'auth-success') {
+          toast({ title: 'Éxito', description: `La integración con ${providerName} se ha completado.` });
+          // The query is already invalidated by the callback page, but another invalidation here doesn't hurt
+          // and ensures data is fresh if the user focuses the window.
+          queryClient.invalidateQueries({ queryKey: ['tenantIntegrations', tenantId] });
+      } else if (type === 'auth-error') {
+          toast({ title: 'Error de Autenticación', description: `No se pudo completar la integración con ${providerName}: ${error || 'Error desconocido.'}`, variant: 'destructive' });
+      }
     };
 
     window.addEventListener('message', handleAuthMessage);
 
-    return () => window.removeEventListener('message', handleAuthMessage);
-
-  }, [queryClient, tenantId, toast, connectingProvider]);
-
-
-
-  const handleConnect = useCallback(async (getAuthUrl: () => Promise<{ url: string, success: boolean } | null>, provider: Provider) => {
-
-    setConnectingProvider(provider);
-
-    try {
-
-                  const { data: rpcResponseData, error: rpcError } = await getAuthUrl();
-
-                  if (rpcError) throw new Error(rpcError.message);
-
-                  
-
-                  // Ensure rpcResponseData is not null and is a single object
-
-                  if (!rpcResponseData) {
-
-                    throw new Error('No se pudo obtener la URL de autorización.');
-
-                  }
-
-            
-
-                  const result = Array.isArray(rpcResponseData) ? rpcResponseData[0] : rpcResponseData;
+    return () => {
+      window.removeEventListener('message', handleAuthMessage);
+    };
+  }, [queryClient, tenantId, toast]);
 
 
-
-      if (!result || !result.success) {
-
-        throw new Error(result?.message || 'No se pudo obtener la URL de autorización.');
-
+  const handleConnect = (provider: 'google_drive' | 'google_gmail') => {
+    getAuthUrlMutation.mutate(
+      { tenantId, provider, finalRedirectUrl: `${window.location.origin}/auth/callback` },
+      {
+        onSuccess: (data) => {
+          const { authUrl } = data;
+          const width = 600, height = 700, left = window.screen.width / 2 - width / 2, top = window.screen.height / 2 - height / 2;
+          window.open(authUrl, 'googleAuth', `width=${width},height=${height},top=${top},left=${left}`);
+        },
       }
-
-      if (!result.url) {
-
-        throw new Error('La URL de autorización no fue devuelta por el servidor.');
-
-      }
-
-      
-
-      const width = 600, height = 700, left = window.screen.width / 2 - width / 2, top = window.screen.height / 2 - height / 2;
-
-      window.open(result.url, 'googleAuth', `width=${width},height=${height},top=${top},left=${left}`);
-
-    } catch (e: Error) {
-
-      console.error('[handleConnect] Excepción capturada:', e);
-
-      toast({ title: 'Error de Conexión', description: e.message, variant: 'destructive' });
-
-      setConnectingProvider(null);
-
-    }
-
-  }, [toast]);
+    );
+  };
 
   const handleDisconnectRequest = (integrationId: string, provider: Provider) => {
     setDisconnectAlert({ isOpen: true, provider, accountEmail: 'esta integración', integrationId });
   };
-
   const confirmDisconnect = () => {
     if (!disconnectAlert.integrationId) return;
-    // Aquí la lógica de desconexión debería usar el ID de la integración, no el provider.
-    // Esto requiere ajustar `useDeleteIntegration` para que acepte un ID.
-    // Por ahora, se mantiene la lógica anterior, pero esto es un punto a mejorar.
     disconnectMutation.mutate(
       { tenantId, integrationId: disconnectAlert.integrationId! },
       {
@@ -472,33 +390,42 @@ interface EnqueueTestEmailResponse {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Integraciones de Google</CardTitle>
-          <CardDescription>Conecta los servicios de Google para ampliar la funcionalidad de la plataforma.</CardDescription>
+          <CardTitle>Integraciones Globales</CardTitle>
+          <CardDescription>Conecta los servicios de Google y WhatsApp para ampliar la funcionalidad de la plataforma.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* ... (Integraciones de Google se mantienen igual) ... */}
           <IntegrationCard
             title="Google Drive"
             icon={<FolderKanban className="h-8 w-8 text-blue-500" />}
             isConnected={!!googleDriveIntegration}
             accountEmail={googleDriveIntegration?.account_email}
-            onConnect={() => handleConnect(getDriveAuthUrl, 'google_drive')}
+            onConnect={() => handleConnect('google_drive')}
             onDisconnect={() => handleDisconnectRequest(googleDriveIntegration!.id, 'google_drive')}
-            isConnecting={isFetchingDriveUrl}
-            isDisconnecting={disconnectMutation.isPending && disconnectMutation.variables?.provider === 'google_drive'}
+            isConnecting={getAuthUrlMutation.isPending && getAuthUrlMutation.variables?.provider === 'google_drive'}
+            isDisconnecting={disconnectMutation.isPending && disconnectMutation.variables?.integrationId === googleDriveIntegration?.id}
           />
           <IntegrationCard
             title="Gmail"
             icon={<Mail className="h-8 w-8 text-red-500" />}
             isConnected={!!gmailIntegration}
             accountEmail={gmailIntegration?.account_email}
-            onConnect={() => handleConnect(getGmailAuthUrl, 'google_gmail')}
+            onConnect={() => handleConnect('google_gmail')}
             onDisconnect={() => handleDisconnectRequest(gmailIntegration!.id, 'google_gmail')}
-            isConnecting={isFetchingGmailUrl}
-            isDisconnecting={disconnectMutation.isPending && disconnectMutation.variables?.provider === 'google_gmail'}
+            isConnecting={getAuthUrlMutation.isPending && getAuthUrlMutation.variables?.provider === 'google_gmail'}
+            isDisconnecting={disconnectMutation.isPending && disconnectMutation.variables?.integrationId === gmailIntegration?.id}
             onTest={handleSendTestEmail}
             isTesting={isSendingTest}
           />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4">
+            <div className="flex items-center gap-4">
+              <MessageSquare className="h-8 w-8 text-green-600" />
+              <span className="font-semibold">WhatsApp Business</span>
+            </div>
+            <Button onClick={() => setConfigProvider(whatsappProvider)}>
+              <Settings className="mr-2 h-4 w-4" />
+              Configurar
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
@@ -577,6 +504,7 @@ interface EnqueueTestEmailResponse {
         onOpenChange={(isOpen) => !isOpen && setConfigProvider(null)}
         provider={configProvider}
         tenantId={tenantId}
+        platformId={platformId}
       />
 
       <AlertDialog open={disconnectAlert.isOpen} onOpenChange={(isOpen) => setDisconnectAlert({ ...disconnectAlert, isOpen })}>

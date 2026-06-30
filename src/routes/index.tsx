@@ -42,6 +42,11 @@ const SuperadminRoutes = () => {
         <Route path="platforms/:platformId/plans/edit/:planId" element={<PlanForm />} />
         <Route path="platforms/:platformId/assets" element={<AssetCatalog />} />
 
+        {/* Nested Tenant Routes */}
+        <Route path="platforms/:platformId/tenants" element={<TenantList />} />
+        <Route path="platforms/:platformId/tenants/:tenantId" element={<TenantDetails />} />
+        <Route path="platforms/:platformId/tenants/:tenantId/edit" element={<EditTenant />} />
+
         {/* Tenant Routes */}
         <Route path="tenants" element={<TenantList />} />
         <Route path="tenants/create" element={<CreateTenant />} />

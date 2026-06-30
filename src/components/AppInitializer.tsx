@@ -12,7 +12,7 @@ interface AppInitializerProps {
 
 const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   const { data: settings } = useSettings();
-  const { loading: authLoading } = useAuth(); // Obtener el estado de carga de la autenticación
+  const { loading: authLoading, isAuthenticated } = useAuth(); // Obtener el estado de carga de la autenticación
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -28,7 +28,12 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
   useEffect(() => {
     const checkSuperadmin = async () => {
       try {
-        const { data, error } = await supabase.rpc('check_superadmin_exists');
+        console.log('[AppInitializer] Checking for superadmin...');
+        const { data, error } = await supabase.functions.invoke('core-actions', {
+          body: { action: 'check_superadmin_exists' },
+        });
+
+        console.log('[AppInitializer] RPC Result:', { data, error });
 
         if (error) {
           console.error('Error al verificar superadministrador:', error);
@@ -40,6 +45,7 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
             navigate('/setup-superadmin');
           }
         } else {
+          // If superadmin exists and we are on the setup page, redirect to auth
           if (location.pathname === '/setup-superadmin') {
             navigate('/auth');
           }
@@ -49,8 +55,11 @@ const AppInitializer: React.FC<AppInitializerProps> = ({ children }) => {
       }
     };
 
-    checkSuperadmin();
-  }, [navigate, location.pathname]);
+    // Only run the check if auth state is resolved and user is not authenticated
+    if (!authLoading && !isAuthenticated) {
+      checkSuperadmin();
+    }
+  }, [navigate, location.pathname, authLoading, isAuthenticated]);
 
   // Si la autenticación está en proceso, mostrar el loader
   if (authLoading) {

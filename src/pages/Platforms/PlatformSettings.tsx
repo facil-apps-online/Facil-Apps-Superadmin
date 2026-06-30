@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -14,40 +13,48 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ArrowLeft, Save, Mail } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import EmailTemplatesPlatformTab from './EmailTemplatesPlatformTab';
+import { invokeCoreAction } from '@/lib/api';
+
+// --- Interfaces ---
+interface Country {
+  id: string;
+  name: string;
+  // Add other country fields if needed
+}
+interface Language {
+  id: string;
+  name: string;
+}
+interface Currency {
+  id: string;
+  name: string;
+  code: string;
+}
 
 // --- Fetching Functions ---
 const fetchPlatformDetails = async (platformId: string) => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
-    body: { action: 'get_platform_by_id', payload: { platformId } },
-  });
-  if (error) throw new Error(error.message);
-  return data;
+  return invokeCoreAction('get_platform_by_id', { platformId });
 };
 
 const fetchSystemCatalogs = async () => {
-  const { data: countries, error: countriesError } = await supabase.from('countries').select('*').eq('is_active', true).order('name');
-  const { data: languages, error: languagesError } = await supabase.from('languages').select('*').order('name');
-  const { data: currencies, error: currenciesError } = await supabase.from('currencies').select('*').order('name');
-  // TODO: Add timezones fetching when available
-  if (countriesError || languagesError || currenciesError) {
+  const countries = await invokeCoreAction('get_countries');
+  const languages = await invokeCoreAction('get_languages');
+  const currencies = await invokeCoreAction('get_currencies');
+  if (!countries || !languages || !currencies) {
     throw new Error('Failed to fetch system catalogs');
   }
   return { countries, languages, currencies };
 };
 
-const fetchAssignedCountries = async (platformId: string) => {
-    const { data, error } = await supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'get_countries_for_platform', payload: { platformId } },
-    });
-    if (error) throw new Error(error.message);
-    return data as string[];
+const fetchAssignedCountries = async (platformId: string): Promise<Country[]> => {
+    const data = await invokeCoreAction('get_countries_for_platform', { platformId });
+    return data || [];
 };
 
 // --- Zod Schema ---
 const settingsSchema = z.object({
   default_currency_id: z.string().uuid().nullable(),
   default_language_id: z.string().uuid().nullable(),
-  default_timezone: z.string().nullable(), // TODO: Change to ID when timezones table is ready
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -69,11 +76,11 @@ export default function PlatformSettings() {
   });
 
   const { data: catalogs, isLoading: isLoadingCatalogs } = useQuery({
-    queryKey: ['systemCatalogs'],
+    queryKey: ['systemCatalogsForPlatformSettings'],
     queryFn: fetchSystemCatalogs,
   });
 
-  const { data: initialAssignedIds, isLoading: isLoadingAssigned } = useQuery({
+  const { data: initialAssignedCountries, isLoading: isLoadingAssigned } = useQuery({
     queryKey: ['platformCountries', platformId],
     queryFn: () => fetchAssignedCountries(platformId!),
     enabled: !!platformId,
@@ -81,38 +88,40 @@ export default function PlatformSettings() {
 
   // --- Mutations ---
   const updateSettingsMutation = useMutation({
-    mutationFn: (values: SettingsFormValues) => supabase.functions.invoke('superadmin-actions', {
-      body: { action: 'update_platform_settings', payload: { platformId, settings: values } },
-    }),
+    mutationFn: (values: SettingsFormValues) => invokeCoreAction('update_platform_settings', { platformId, settings: values }),
     onSuccess: () => {
       toast({ title: 'Éxito', description: 'Configuración general actualizada.' });
       queryClient.invalidateQueries({ queryKey: ['platform', platformId] });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       console.error("Error updating platform settings:", error);
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 
   const assignCountryMutation = useMutation({
-    mutationFn: (countryId: string) => supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'assign_country_to_platform', payload: { platformId, countryId } },
-    }),
+    mutationFn: (countryId: string) => invokeCoreAction('assign_country_to_platform', { platformId, countryId }),
     onSuccess: (_, countryId) => {
         setAssignedCountryIds(prev => new Set(prev).add(countryId));
+        toast({ title: 'País Asignado', description: 'El país ha sido asignado a la plataforma.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: `No se pudo asignar el país: ${error.message}`, variant: 'destructive' });
     }
   });
 
   const removeCountryMutation = useMutation({
-    mutationFn: (countryId: string) => supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'remove_country_from_platform', payload: { platformId, countryId } },
-    }),
+    mutationFn: (countryId: string) => invokeCoreAction('remove_country_from_platform', { platformId, countryId }),
     onSuccess: (_, countryId) => {
         setAssignedCountryIds(prev => {
             const newSet = new Set(prev);
             newSet.delete(countryId);
             return newSet;
         });
+        toast({ title: 'País Desasignado', description: 'El país ha sido quitado de la plataforma.' });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: `No se pudo quitar el país: ${error.message}`, variant: 'destructive' });
     }
   });
 
@@ -127,20 +136,18 @@ export default function PlatformSettings() {
       form.reset({
         default_currency_id: platform.default_currency_id || null,
         default_language_id: platform.default_language_id || null,
-        default_timezone: platform.default_timezone || null,
       });
     }
   }, [platform, form]);
 
   useEffect(() => {
-    if (initialAssignedIds) {
-      setAssignedCountryIds(new Set(initialAssignedIds));
+    if (initialAssignedCountries) {
+      setAssignedCountryIds(new Set(initialAssignedCountries.map(c => c.id)));
     }
-  }, [initialAssignedIds]);
+  }, [initialAssignedCountries]);
 
   // --- Handlers ---
   const onSubmit = (values: SettingsFormValues) => {
-    console.log("Submitting values:", values);
     updateSettingsMutation.mutate(values);
   };
 
@@ -190,39 +197,35 @@ export default function PlatformSettings() {
                   <FormField
                     control={form.control}
                     name="default_currency_id"
-                    render={({ field }) => {
-                      return (
-                        <FormItem>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar moneda..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {catalogs?.currencies?.map(c => <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Moneda por Defecto</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar moneda..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {catalogs?.currencies?.map((c: Currency) => <SelectItem key={c.id} value={c.id}>{c.name} ({c.code})</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                   <FormField
                     control={form.control}
                     name="default_language_id"
-                    render={({ field }) => {
-                      return (
-                        <FormItem>
-                          <FormLabel>Idioma por Defecto</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar idioma..." /></SelectTrigger></FormControl>
-                            <SelectContent>
-                              {catalogs?.languages?.map(l => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Idioma por Defecto</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl><SelectTrigger><SelectValue placeholder="Seleccionar idioma..." /></SelectTrigger></FormControl>
+                          <SelectContent>
+                            {catalogs?.languages?.map((l: Language) => <SelectItem key={l.id} value={l.id}>{l.name}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                  {/* TODO: Add Timezone Select when ready */}
                 </CardContent>
                 <div className="flex justify-end p-6">
                     <Button type="submit" disabled={updateSettingsMutation.isPending}>
@@ -242,7 +245,7 @@ export default function PlatformSettings() {
                     <CardDescription>Selecciona los países en los que esta plataforma podrá operar.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    {catalogs?.countries?.map(country => (
+                    {catalogs?.countries?.map((country: Country) => (
                         <div key={country.id} className="flex items-center justify-between p-3 border rounded-md">
                             <span>{country.name}</span>
                             <Switch

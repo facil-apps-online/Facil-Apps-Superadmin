@@ -115,18 +115,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
   }, [supabaseClient, processSession]);
 
   const login = useCallback(async (email: string, password: string) => {
-    const { error: signInError } = await supabaseClient.auth.signInWithPassword({ email, password });
-    if (signInError) throw signInError;
-
-    // After successful sign-in, explicitly get the session and process it
-    const { data: { session }, error: getSessionError } = await supabaseClient.auth.getSession();
-    if (getSessionError) throw getSessionError;
+    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    if (!data.session) {
+      throw new Error("Login successful but no session returned.");
+    }
     
-    processSession(session); // Manually trigger session processing to update context state
-
-    const role = session?.user?.app_metadata?.assignments?.[0]?.role || null;
+    // The onAuthStateChange listener will automatically handle the session and update the context state.
+    // We just need to return the role from the successful login response.
+    const role = data.session.user?.app_metadata?.assignments?.[0]?.role || null;
     return role;
-  }, [supabaseClient, processSession]);
+  }, [supabaseClient]);
 
   const logout = useCallback(async () => {
     await supabaseClient.auth.signOut();

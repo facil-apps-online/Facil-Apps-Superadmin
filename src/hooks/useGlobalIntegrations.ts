@@ -79,7 +79,7 @@ export const useGlobalIntegrations = () => {
   return useQuery<GlobalIntegrationsData, Error>({
     queryKey: ['globalIntegrations'],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+      const { data, error } = await supabase.functions.invoke('core-actions', {
         body: { action: 'get_global_integrations' },
       });
 

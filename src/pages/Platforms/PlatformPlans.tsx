@@ -43,7 +43,7 @@ export default function PlatformPlans() {
       try {
         // TODO: Idealmente, obtener también el nombre de la plataforma para el título.
         // Por ahora, nos centramos en los planes.
-        const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+        const { data, error } = await supabase.functions.invoke('core-actions', {
           body: { action: 'get_subscription_plans_by_platform', payload: { platformId } },
         });
 

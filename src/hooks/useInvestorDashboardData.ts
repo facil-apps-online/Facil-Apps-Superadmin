@@ -20,7 +20,7 @@ const fetchInvestorDashboardData = async (assignments: UserAssignment[]): Promis
     stake_percentage: a.stake_percentage
   }));
 
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action: 'get_investor_dashboard_data', payload: { platformData } },
   });
 

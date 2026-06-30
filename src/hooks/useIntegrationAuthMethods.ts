@@ -9,7 +9,7 @@ export interface IntegrationAuthMethod {
 }
 
 const fetchIntegrationAuthMethods = async (): Promise<IntegrationAuthMethod[]> => {
-  const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+  const { data, error } = await supabase.functions.invoke('core-actions', {
     body: { action: 'get_integration_auth_methods' },
   });
 

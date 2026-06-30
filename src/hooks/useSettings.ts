@@ -1,6 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabaseClient";
-import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 
 interface Setting {
   id: string;
@@ -12,50 +10,12 @@ interface Setting {
 export const useSettings = () => {
   return useQuery({
     queryKey: ['settings'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('settings')
-        .select('*')
-        .order('key');
-
-      if (error) {
-        throw error;
-      }
-
-      return data as Setting[];
+    queryFn: (): Promise<Setting[]> => {
+      // The 'settings' table does not exist, returning an empty array.
+      // This hook is being kept to avoid breaking multiple components that use it.
+      return Promise.resolve([]);
     },
   });
 };
 
-export const useUpdateSetting = () => {
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  return useMutation({
-    mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      const { data, error } = await supabase
-        .from('settings')
-        .upsert({ key, value }, { onConflict: 'key' })
-        .select()
-        .single();
-
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['settings'] });
-      toast({
-        title: "Configuración actualizada",
-        description: "Los cambios se han guardado correctamente.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "No se pudo actualizar la configuración.",
-        variant: "destructive",
-      });
-      console.error('Error updating setting:', error);
-    },
-  });
-};
+// The useUpdateSetting hook has been removed as it was interacting with the non-existent 'settings' table.

@@ -24,7 +24,7 @@ export default function EditPlatform() {
       }
       setLoading(true);
       try {
-        const { data, error } = await supabase.functions.invoke('superadmin-actions', {
+        const { data, error } = await supabase.functions.invoke('core-actions', {
           body: { action: 'get_platform_by_id', payload: { platformId: id } },
         });
         if (error) throw new Error(error.message);
@@ -46,8 +46,8 @@ export default function EditPlatform() {
   const handleSubmit = async (values: PlatformFormValues) => {
     setIsSubmitting(true);
     try {
-      const { error } = await supabase.functions.invoke('superadmin-actions', {
-        body: { action: 'update_platform', payload: { id, data: values } },
+      const { error } = await supabase.functions.invoke('core-actions', {
+        body: { action: 'update_platform', payload: { id, ...values } },
       });
 
       if (error) throw new Error(error.message);

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabaseClient';
+import { invokeCoreAction } from '@/lib/api';
 
 export interface PlatformStats {
   platform_id: string;
@@ -9,18 +9,15 @@ export interface PlatformStats {
 }
 
 const fetchPlatformsStats = async (): Promise<PlatformStats[]> => {
-  const { data, error } = await supabase.rpc('get_platforms_stats');
-
-  if (error) {
-    throw new Error(error.message);
-  }
-  return data;
+  const data = await invokeCoreAction('get_platforms_stats');
+  return data || [];
 };
 
 export const usePlatformsStats = () => {
   return useQuery<PlatformStats[], Error>({
     queryKey: ['platformsStats'],
     queryFn: fetchPlatformsStats,
-    select: (data) => data.sort((a, b) => a.platform_name.localeCompare(b.platform_name)),
+    // Sort the data alphabetically by platform name before returning it to the component.
+    select: (data) => [...data].sort((a, b) => a.platform_name.localeCompare(b.platform_name)),
   });
 };

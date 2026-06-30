@@ -33,6 +33,9 @@ import TenantDetails from '@/pages/TenantDetails';
 import GlobalSettings from '@/pages/Settings/GlobalSettings';
 import VendorDashboard from '@/pages/VendorDashboard';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
+import AuthCallback from '@/pages/AuthCallback';
+import SetupSuperadmin from '@/pages/SetupSuperadmin';
+import AppInitializer from '@/components/AppInitializer';
 import InvestorDashboard from '@/pages/InvestorDashboard';
 
 
@@ -48,50 +51,56 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider supabaseClient={supabase}>
-          <Routes>
-            {/* Rutas Públicas */}
-            <Route path="/auth" element={<AuthPage />} />
-            
+          <AppInitializer>
+            <Routes>
+              {/* Rutas Públicas */}
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/setup-superadmin" element={<SetupSuperadmin />} />
+              <Route path="/auth/callback" element={<AuthCallback />} />
+              
 
-            {/* Rutas Protegidas (usando tu componente ProtectedRoute) */}
-            <Route element={<ProtectedRoute />}>
-              <Route element={<SuperadminLayout />}>
-                <Route path="/" element={<SuperadminStats />} />
-                <Route path="/dashboard" element={<InvestorDashboard />} />
+              {/* Rutas Protegidas (usando tu componente ProtectedRoute) */}
+              <Route element={<ProtectedRoute />}>
+                <Route element={<SuperadminLayout />}>
+                  <Route path="/" element={<SuperadminStats />} />
+                  <Route path="/dashboard" element={<InvestorDashboard />} />
 
-                <Route path="/tenants/:tenantId/edit" element={<EditTenant />} />
-                <Route path="/tenants/:tenantId" element={<TenantDetails />} />
-                <Route path="/platforms" element={<PlatformsList />} />
-                <Route path="/platforms/:platformId/dashboard" element={<SuperadminStats />} />
-                <Route path="/platforms/create" element={<CreatePlatform />} />
-                <Route path="/platforms/edit/:id" element={<EditPlatform />} />
-                <Route path="/platforms/:platformId/settings" element={<PlatformSettings />} />
-                <Route path="/platforms/:platformId/plans" element={<PlatformPlans />} />
-                <Route path="/platforms/:platformId/plans/create" element={<PlanForm />} />
-                <Route path="/platforms/:platformId/plans/edit/:planId" element={<PlanForm />} />
-                <Route path="/platforms/:platformId/assets" element={<AssetCatalog />} />
-                <Route path="/platforms/:platformId/tenants" element={<TenantList />} />
-                <Route path="/access-management" element={<AccessManagement />} />
-                <Route path="/system-catalogs" element={<SystemCatalogs />} />
-                <Route path="/integrations" element={<IntegrationsPage />} />
-                <Route path="/integrations/new" element={<IntegrationProviderForm />} />
-                <Route path="/integrations/edit/:id" element={<IntegrationProviderForm />} />
-                <Route path="/translations" element={<LocalizationsSettings />} />
-                <Route path="/system-alerts" element={<SystemAlerts />} />
+                  <Route path="/tenants/:tenantId/edit" element={<EditTenant />} />
+                  <Route path="/tenants/:tenantId" element={<TenantDetails />} />
+                  <Route path="/platforms" element={<PlatformsList />} />
+                  <Route path="/platforms/:platformId/dashboard" element={<SuperadminStats />} />
+                  <Route path="/platforms/create" element={<CreatePlatform />} />
+                  <Route path="/platforms/edit/:id" element={<EditPlatform />} />
+                  <Route path="/platforms/:platformId/settings" element={<PlatformSettings />} />
+                  <Route path="/platforms/:platformId/plans" element={<PlatformPlans />} />
+                  <Route path="/platforms/:platformId/plans/create" element={<PlanForm />} />
+                  <Route path="/platforms/:platformId/plans/edit/:planId" element={<PlanForm />} />
+                  <Route path="/platforms/:platformId/assets" element={<AssetCatalog />} />
+                  <Route path="/platforms/:platformId/tenants" element={<TenantList />} />
+                  <Route path="/platforms/:platformId/tenants/:tenantId" element={<TenantDetails />} />
+                  <Route path="/platforms/:platformId/tenants/:tenantId/edit" element={<EditTenant />} />
+                  <Route path="/access-management" element={<AccessManagement />} />
+                  <Route path="/system-catalogs" element={<SystemCatalogs />} />
+                  <Route path="/integrations" element={<IntegrationsPage />} />
+                  <Route path="/integrations/new" element={<IntegrationProviderForm />} />
+                  <Route path="/integrations/edit/:id" element={<IntegrationProviderForm />} />
+                  <Route path="/translations" element={<LocalizationsSettings />} />
+                  <Route path="/system-alerts" element={<SystemAlerts />} />
 
-                <Route path="/performance-metrics" element={<PerformanceMetrics />} />
-                {/* Rutas de configuración movidas a un nivel superior o eliminadas */}
-                {/* <Route path="/subscription-plans" element={<SubscriptionPlans />} /> */}
-                {/* <Route path="/plan-pricing" element={<PlanPricingManager />} /> */}
-                <Route path="/global-settings" element={<GlobalSettings />} />
-                <Route path="/profile-settings" element={<ProfileSettings />} />
-                <Route path="/commissions" element={<VendorDashboard />} />
-                {/* Aquí irían el resto de tus rutas protegidas */}
+                  <Route path="/performance-metrics" element={<PerformanceMetrics />} />
+                  {/* Rutas de configuración movidas a un nivel superior o eliminadas */}
+                  {/* <Route path="/subscription-plans" element={<SubscriptionPlans />} /> */}
+                  {/* <Route path="/plan-pricing" element={<PlanPricingManager />} /> */}
+                  <Route path="/global-settings" element={<GlobalSettings />} />
+                  <Route path="/profile-settings" element={<ProfileSettings />} />
+                  <Route path="/commissions" element={<VendorDashboard />} />
+                  {/* Aquí irían el resto de tus rutas protegidas */}
+                </Route>
               </Route>
-            </Route>
 
-            {/* <Route path="*" element={<NotFoundPage />} /> */}
-          </Routes>
+              {/* <Route path="*" element={<NotFoundPage />} /> */}
+            </Routes>
+          </AppInitializer>
           <Toaster />
         </AuthProvider>
       </BrowserRouter>
