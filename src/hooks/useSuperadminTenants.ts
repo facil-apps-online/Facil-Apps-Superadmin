@@ -5,6 +5,19 @@ import { supabase } from '@/lib/supabaseClient';
 export interface Platform {
   id: string;
   name: string;
+  slug: string | null;
+  description: string | null;
+  description_en: string | null;
+  base_url: string | null;
+  logo_url: string | null;
+  status: string | null;
+  social_facebook: string | null;
+  social_instagram: string | null;
+  display_order: number | null;
+  is_public: boolean | null;
+  category_id: string | null;
+  default_currency_id: string | null;
+  default_language_id: string | null;
 }
 
 // Updated Tenant interface to include the nested platform object

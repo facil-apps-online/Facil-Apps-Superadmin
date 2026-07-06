@@ -32,8 +32,13 @@ import { invokeCoreAction } from '@/lib/api';
 interface Platform {
   id: string;
   name: string;
+  slug: string | null;
   description: string | null;
   base_url: string | null;
+  status: string | null;
+  logo_url: string | null;
+  is_public: boolean | null;
+  display_order: number | null;
 }
 
 export default function PlatformsList() {
@@ -128,6 +133,8 @@ export default function PlatformsList() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Slug</TableHead>
+                <TableHead>Estado</TableHead>
                 <TableHead>Descripción</TableHead>
                 <TableHead>URL Base</TableHead>
                 <TableHead className="text-right">Acciones</TableHead>
@@ -138,8 +145,22 @@ export default function PlatformsList() {
                 sortedPlatforms.map((platform) => (
                   <TableRow key={platform.id}>
                     <TableCell className="font-medium">{platform.name}</TableCell>
-                    <TableCell>{platform.description || 'N/A'}</TableCell>
-                    <TableCell>{platform.base_url || 'N/A'}</TableCell>
+                    <TableCell className="text-muted-foreground">{platform.slug || '-'}</TableCell>
+                    <TableCell>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        platform.status === 'production' ? 'bg-green-100 text-green-700' :
+                        platform.status === 'development' ? 'bg-amber-100 text-amber-700' :
+                        platform.status === 'planning' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {platform.status === 'production' ? 'Producción' :
+                         platform.status === 'development' ? 'Desarrollo' :
+                         platform.status === 'planning' ? 'Planeación' :
+                         platform.status || '-'}
+                      </span>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate">{platform.description || 'N/A'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate">{platform.base_url || 'N/A'}</TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-2">
                         {role === 'investor' ? (
@@ -213,7 +234,7 @@ export default function PlatformsList() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center">
+                  <TableCell colSpan={6} className="text-center">
                     No se encontraron plataformas.
                   </TableCell>
                 </TableRow>
