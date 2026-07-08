@@ -281,7 +281,7 @@ export const PlatformForm: React.FC<PlatformFormProps> = ({
                     </FormControl>
                     <SelectContent>
                       {categoriesLoading ? (
-                        <SelectItem value="" disabled>Cargando...</SelectItem>
+                        <SelectItem value="loading" disabled>Cargando...</SelectItem>
                       ) : (
                         categories?.map((cat) => {
                           const name =

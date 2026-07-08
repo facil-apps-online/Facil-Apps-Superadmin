@@ -4,8 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Superadmin</title>
-      <script async defer
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBMak_Sa32WSbjbegpOJSFCbFZQXtM0Gls&libraries=places&v=beta&loading=async">
+    <!-- Google Maps -->
+    <script async defer
+      src="https://maps.googleapis.com/maps/api/js?key=%VITE_GOOGLE_API_KEY%&libraries=places&v=beta&loading=async">
+    </script>
+
+    <!-- Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=%VITE_GOOGLE_ANALYTICS_ID%"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '%VITE_GOOGLE_ANALYTICS_ID%');
     </script>
   </head>
 

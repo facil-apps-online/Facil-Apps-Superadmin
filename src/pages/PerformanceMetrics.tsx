@@ -1,6 +1,7 @@
 import React from 'react';
 import { useApiHealthStats } from '@/hooks/useApiHealthStats';
 import { useServerHealthStats } from '@/hooks/useServerHealthStats';
+import { useDatabaseNodesHealth } from '@/hooks/useDatabaseNodesHealth';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertTriangle, Activity, AlertCircle, BarChart, HardDrive, MemoryStick, Cpu } from 'lucide-react';
@@ -54,6 +55,7 @@ const ChartCard = ({ title, description, children, isLoading }) => (
 export default function PerformanceMetrics() {
   const { data: apiStats, isLoading: isLoadingApi, isError: isErrorApi, error: errorApi } = useApiHealthStats();
   const { data: serverStats, isLoading: isLoadingServer, isError: isErrorServer, error: errorServer } = useServerHealthStats();
+  const { data: nodesHealth, isLoading: isLoadingNodes } = useDatabaseNodesHealth();
   const [page, setPage] = React.useState(1);
   const itemsPerPage = 5;
 
@@ -88,9 +90,70 @@ export default function PerformanceMetrics() {
 
   return (
     <div className="space-y-8 md:p-6">
+      {/* Nodes Health Section */}
+      <div className="pt-2">
+        <h2 className="text-xl font-bold">Estado de Nodos de Bases de Datos</h2>
+        <p className="text-muted-foreground">Monitor de salud de todas las bases de datos de Supabase registradas.</p>
+      </div>
+      <Card className="col-span-1 lg:col-span-3">
+        <CardContent className="pt-6">
+          {isLoadingNodes ? (
+            <Skeleton className="h-[200px] w-full" />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nodo</TableHead>
+                  <TableHead>URL de Proyecto</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead className="text-right">Latencia</TableHead>
+                  <TableHead>Detalles</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(nodesHealth || []).map((node) => (
+                  <TableRow key={node.node_id}>
+                    <TableCell className="font-medium">{node.node_name}</TableCell>
+                    <TableCell className="font-mono text-xs">{node.project_url}</TableCell>
+                    <TableCell>
+                      {node.status === 'online' ? (
+                        <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                          Online
+                        </span>
+                      ) : node.status === 'warning' ? (
+                        <span className="inline-flex items-center rounded-full bg-yellow-100 px-2.5 py-0.5 text-xs font-medium text-yellow-800">
+                          Warning
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-medium text-red-800">
+                          Error
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {node.latency_ms !== null ? `${node.latency_ms} ms` : '-'}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]" title={node.details}>
+                      {node.details}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!nodesHealth || nodesHealth.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-muted-foreground h-24">
+                      No hay nodos de infraestructura registrados activos.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
       {/* API Health Section */}
-      <div>
-        <h2 className="text-xl font-bold">Salud de la Base de Datos</h2>
+      <div className="pt-4">
+        <h2 className="text-xl font-bold">Métricas de Consultas (Core DB)</h2>
         <p className="text-muted-foreground">Datos de los últimos 60 minutos. Se actualiza automáticamente.</p>
       </div>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
