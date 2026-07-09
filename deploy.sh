@@ -1,17 +1,20 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Iniciando despliegue del portal de Administración..."
-echo "⬇️ 1/4 Descargando cambios de GitHub..."
+echo "ðŸš€ Iniciando despliegue del portal de AdministraciÃ³n..."
+echo "â¬‡ï¸ 1/4 Descargando cambios de GitHub..."
 git pull origin master
 
-echo "🧹 2/4 Limpiando caché de npm..."
+echo "ðŸ§¹ 2/4 Limpiando cachÃ© de npm..."
 npm cache clean --force
 
-echo "📦 3/4 Instalando dependencias..."
+echo "ðŸ“¦ 3/4 Instalando dependencias..."
 NODE_OPTIONS="--max-old-space-size=4096" npm install
 
-echo "🏗️ 4/4 Construyendo la aplicación..."
+echo "🌐 Actualizando listado de navegadores (browserslist)..."
+npx update-browserslist-db@latest
+
+echo "ðŸ—ï¸ 4/4 Construyendo la aplicaciÃ³n..."
 NODE_OPTIONS="--max-old-space-size=4096" npm run build
 
-echo "✅ ¡Despliegue del Admin completado con éxito!"
+echo "âœ… Â¡Despliegue del Admin completado con Ã©xito!"
