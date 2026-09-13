@@ -17,7 +17,6 @@ const settingsSchema = z.object({
   contact_email: z.string().email('Debe ser un correo electrónico válido.'),
   address: z.string().optional(),
   trial_duration_days: z.coerce.number().int().min(1, 'La duración debe ser al menos 1 día.'),
-  max_vendor_trial_days: z.coerce.number().int().min(1, 'El tope debe ser al menos 1 día.'),
 });
 
 type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -49,7 +48,6 @@ export function GeneralCompanySettings() {
       contact_email: '',
       address: '',
       trial_duration_days: 14,
-      max_vendor_trial_days: 30,
     },
   });
 
@@ -72,7 +70,6 @@ export function GeneralCompanySettings() {
         contact_email: settings.contact_email || '',
         address: settings.address || '',
         trial_duration_days: settings.trial_duration_days || 14,
-        max_vendor_trial_days: settings.max_vendor_trial_days || 30,
       });
     }
   }, [settings, settingsForm]);
@@ -163,17 +160,6 @@ export function GeneralCompanySettings() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Días del Período de Prueba</FormLabel>
-                      <FormControl><Input type="number" {...field} /></FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={settingsForm.control}
-                  name="max_vendor_trial_days"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tope de Días de Prueba (Vendedores)</FormLabel>
                       <FormControl><Input type="number" {...field} /></FormControl>
                       <FormMessage />
                     </FormItem>

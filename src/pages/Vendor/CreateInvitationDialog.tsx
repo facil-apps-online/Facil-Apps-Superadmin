@@ -18,8 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { usePlatforms } from '@/hooks/usePlatforms';
-import { useGlobalSettings } from '@/hooks/useGlobalSettings';
-import { useCreateVendorInvitation, VendorInvitation } from '@/hooks/useVendorInvitations';
+import { useCreateVendorInvitation, usePlatformTrialPlan, VendorInvitation } from '@/hooks/useVendorInvitations';
 import { PlusCircle, Copy, Send } from 'lucide-react';
 
 const formSchema = z.object({
@@ -41,11 +40,9 @@ export function CreateInvitationDialog({ vendorUserId }: { vendorUserId?: string
   const [open, setOpen] = useState(false);
   const [created, setCreated] = useState<VendorInvitation | null>(null);
   const { data: platforms } = usePlatforms();
-  const { data: globalSettings } = useGlobalSettings();
   const createMutation = useCreateVendorInvitation();
 
   const productionPlatforms = (platforms || []).filter((p) => p.status === 'production');
-  const maxTrialDays = globalSettings?.max_vendor_trial_days || 30;
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -61,7 +58,22 @@ export function CreateInvitationDialog({ vendorUserId }: { vendorUserId?: string
     },
   });
 
+  const selectedPlatformId = form.watch('platformId');
+  const { data: trialPlan } = usePlatformTrialPlan(selectedPlatformId || undefined);
+
   const onSubmit = (values: FormValues) => {
+    const requestedDays = values.trialDaysOverride ? Number(values.trialDaysOverride) : undefined;
+    if (requestedDays !== undefined) {
+      if (!trialPlan?.durationDays) {
+        form.setError('trialDaysOverride', { message: 'Esta plataforma no tiene un plan de prueba configurado.' });
+        return;
+      }
+      if (requestedDays > trialPlan.durationDays) {
+        form.setError('trialDaysOverride', { message: `No puede superar los ${trialPlan.durationDays} días del plan de prueba de la plataforma.` });
+        return;
+      }
+    }
+
     createMutation.mutate(
       {
         platformId: values.platformId,
@@ -222,8 +234,21 @@ export function CreateInvitationDialog({ vendorUserId }: { vendorUserId?: string
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Días de Prueba (opcional)</FormLabel>
-                      <FormControl><Input type="number" placeholder={`Por defecto de la plataforma`} {...field} /></FormControl>
-                      <FormDescription>Máximo permitido: {maxTrialDays} días.</FormDescription>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          placeholder={trialPlan?.durationDays ? `Por defecto: ${trialPlan.durationDays} días` : 'Sin plan de prueba'}
+                          disabled={!selectedPlatformId || !trialPlan?.durationDays}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {!selectedPlatformId
+                          ? 'Selecciona una plataforma para ver el plan de prueba.'
+                          : trialPlan?.durationDays
+                            ? `Solo puedes reducir el trial: máximo ${trialPlan.durationDays} días (plan de prueba de la plataforma). Déjalo vacío para usar el máximo.`
+                            : 'Esta plataforma no tiene un plan de prueba configurado.'}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}

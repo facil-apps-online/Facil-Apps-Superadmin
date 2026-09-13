@@ -76,6 +76,25 @@ export const useVendorInvitationFunnel = (filters: Pick<ListFilters, 'vendorUser
   });
 };
 
+export interface PlatformTrialPlan {
+  planId: string | null;
+  durationDays: number | null;
+}
+
+const fetchPlatformTrialPlan = async (platformId: string): Promise<PlatformTrialPlan> => {
+  return invokeCoreAction('get_platform_trial_plan', { platformId });
+};
+
+/** Días máximos de trial que un vendedor puede otorgar: el duration_days del plan
+ * is_default_trial de la plataforma. El vendedor solo puede pedir menos, nunca más. */
+export const usePlatformTrialPlan = (platformId?: string) => {
+  return useQuery<PlatformTrialPlan, Error>({
+    queryKey: ['platformTrialPlan', platformId],
+    queryFn: () => fetchPlatformTrialPlan(platformId!),
+    enabled: !!platformId,
+  });
+};
+
 export interface CreateInvitationPayload {
   platformId: string;
   vendorUserId?: string;

@@ -10,7 +10,6 @@ export interface GlobalSettings {
   contact_email: string | null;
   address: string | null;
   trial_duration_days: number | null;
-  max_vendor_trial_days: number | null;
   updated_at: string;
 }
 

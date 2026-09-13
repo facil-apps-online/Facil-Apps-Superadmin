@@ -870,7 +870,6 @@ export type Database = {
           default_tax_name: string | null
           default_tax_rate: number | null
           id: number
-          max_vendor_trial_days: number
           trial_duration_days: number
           trial_grace_period_days: number
           updated_at: string
@@ -883,7 +882,6 @@ export type Database = {
           default_tax_name?: string | null
           default_tax_rate?: number | null
           id: number
-          max_vendor_trial_days?: number
           trial_duration_days?: number
           trial_grace_period_days?: number
           updated_at?: string
@@ -896,7 +894,6 @@ export type Database = {
           default_tax_name?: string | null
           default_tax_rate?: number | null
           id?: number
-          max_vendor_trial_days?: number
           trial_duration_days?: number
           trial_grace_period_days?: number
           updated_at?: string
@@ -2750,6 +2747,14 @@ export type Database = {
         Args: { p_plan_id: string; p_tenant_id: string }
         Returns: Json
       }
+      activate_vendor_trial_subscription: {
+        Args: {
+          p_platform_id: string
+          p_requested_days?: number
+          p_tenant_id: string
+        }
+        Returns: Json
+      }
       algorithm_sign: {
         Args: { algorithm: string; secret: string; signables: string }
         Returns: string
@@ -3027,6 +3032,7 @@ export type Database = {
         Returns: boolean
       }
       invoke_core_orphan_cleanup: { Args: never; Returns: Json }
+      invoke_process_email_queue: { Args: never; Returns: Json }
       invoke_process_whatsapp_queue: { Args: never; Returns: undefined }
       is_super_admin: { Args: never; Returns: boolean }
       log_api_metric: {
