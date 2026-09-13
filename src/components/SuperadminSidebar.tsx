@@ -78,6 +78,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                     </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Prospectos">
+                    <Link to="/prospects" onClick={handleLinkClick}>
+                        <Users />
+                        <span>Prospectos</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
                 </SidebarMenu>
             </SidebarGroup>
         ) : (
@@ -98,11 +106,11 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                 </SidebarGroup>
                 )}
 
-                {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor') && (
+                {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor' || role === 'comercial_admin') && (
                 <SidebarGroup>
                     <SidebarGroupLabel>Configuración</SidebarGroupLabel>
                     <SidebarMenu>
-                    {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor') && (
+                    {(role === 'super_admin' || role === 'app_super_admin' || role === 'investor' || role === 'comercial_admin') && (
                         <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Plataformas">
                             <Link to="/platforms" onClick={handleLinkClick}>
@@ -136,10 +144,18 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                 </SidebarGroup>
                 )}
 
-                {(role === 'super_admin' || role === 'app_super_admin') && (
+                {(role === 'super_admin' || role === 'app_super_admin' || role === 'comercial_admin') && (
                 <SidebarGroup>
                     <SidebarGroupLabel>CRM Comercial</SidebarGroupLabel>
                     <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Prospectos">
+                        <Link to="/crm/prospects" onClick={handleLinkClick}>
+                            <Users />
+                            <span>Prospectos</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                     <SidebarMenuItem>
                         <SidebarMenuButton asChild tooltip="Invitaciones">
                         <Link to="/crm/invitations" onClick={handleLinkClick}>

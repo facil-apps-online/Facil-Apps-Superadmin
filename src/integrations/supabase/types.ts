@@ -2709,6 +2709,107 @@ export type Database = {
           },
         ]
       }
+      vendor_prospect_visits: {
+        Row: {
+          created_at: string
+          id: string
+          notes: string | null
+          prospect_id: string
+          status: string
+          vendor_user_id: string
+          visit_date: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          prospect_id: string
+          status: string
+          vendor_user_id: string
+          visit_date?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          notes?: string | null
+          prospect_id?: string
+          status?: string
+          vendor_user_id?: string
+          visit_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_prospect_visits_prospect_id_fkey"
+            columns: ["prospect_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_prospects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vendor_prospects: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          invitation_id: string | null
+          last_name: string | null
+          last_visit_at: string | null
+          phone: string | null
+          platform_id: string
+          status: string
+          updated_at: string
+          vendor_user_id: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          invitation_id?: string | null
+          last_name?: string | null
+          last_visit_at?: string | null
+          phone?: string | null
+          platform_id: string
+          status?: string
+          updated_at?: string
+          vendor_user_id: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          invitation_id?: string | null
+          last_name?: string | null
+          last_visit_at?: string | null
+          phone?: string | null
+          platform_id?: string
+          status?: string
+          updated_at?: string
+          vendor_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendor_prospects_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "vendor_invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_prospects_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vendor_tenants: {
         Row: {
           created_at: string

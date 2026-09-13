@@ -12,6 +12,7 @@ export interface PlatformAssignment {
   email: string;
   platform_roles: {
     app_super_admin?: { platform_id: string; platform_name: string; }[];
+    comercial_admin?: { platform_id: string; platform_name: string; }[];
     investor?: { platform_id: string; platform_name: string; stake_percentage: number; }[];
     vendor?: { 
         id: string;
@@ -25,13 +26,13 @@ export interface PlatformAssignment {
 
 interface AssignRolePayload {
   userId: string;
-  role: 'investor' | 'app_super_admin';
+  role: 'investor' | 'app_super_admin' | 'comercial_admin';
   assignments: any[]; // El payload puede variar dependiendo del rol
 }
 
 interface RemoveAssignmentPayload {
   userId: string;
-  role: 'investor' | 'app_super_admin';
+  role: 'investor' | 'app_super_admin' | 'comercial_admin';
   platformId: string;
 }
 

@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 
-const ALLOWED_ROLES = ['super_admin', 'app_super_admin', 'investor', 'vendor'];
+const ALLOWED_ROLES = ['super_admin', 'app_super_admin', 'comercial_admin', 'investor', 'vendor'];
 
 const ProtectedRoute: React.FC = () => {
   const { loading, isAuthenticated, currentAssignment } = useAuth();
@@ -39,6 +39,8 @@ const ProtectedRoute: React.FC = () => {
         return <Navigate to="/dashboard" replace />;
       case 'vendor':
         return <Navigate to="/commissions" replace />;
+      case 'comercial_admin':
+        return <Navigate to="/crm/prospects" replace />;
 
       default:
         return <Navigate to="/auth" replace />; // Fallback to auth for safety

@@ -7,7 +7,7 @@ export interface CreateUserPayload {
   email: string;
   password?: string; // Opcional, puede que se invite al usuario
   fullName: string;
-  role: 'super_admin' | 'app_super_admin' | 'investor' | 'vendor';
+  role: 'super_admin' | 'app_super_admin' | 'comercial_admin' | 'investor' | 'vendor';
   assignments?: any; // Dependerá del rol
 }
 

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTenantById } from '@/hooks/useSuperadminTenants';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,11 +7,100 @@ import { TenantIntegrationManager } from './TenantIntegrationManager';
 import { TenantSubscriptionsManager } from '@/pages/TenantSubscriptionsManager';
 // import { BranchesTab } from '../Settings/BranchesTab';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from '@/components/ui/command';
+import { ArrowLeft, Check, ChevronsUpDown, Trash2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments';
+import {
+  useTenantVendorAssignment,
+  useAssignVendorToTenant,
+  useRemoveVendorFromTenant,
+} from '@/hooks/useVendorTenantAssignment';
+import { useToast } from '@/hooks/use-toast';
+
+function AssignedVendorCard({ tenantId }: { tenantId: string }) {
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const { data: assignedVendor, isLoading } = useTenantVendorAssignment(tenantId);
+  const { data: allAssignments } = usePlatformLevelAssignments();
+  const assignMutation = useAssignVendorToTenant();
+  const removeMutation = useRemoveVendorFromTenant();
+
+  const vendors = (allAssignments || []).filter((a) => (a.platform_roles?.vendor?.length || 0) > 0);
+
+  const handleAssign = (userId: string) => {
+    assignMutation.mutate({ userId, tenantId }, {
+      onSuccess: () => {
+        toast({ title: 'Éxito', description: 'Vendedor asignado al tenant.' });
+        setOpen(false);
+      },
+      onError: (e) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleRemove = () => {
+    if (!assignedVendor) return;
+    removeMutation.mutate({ userId: assignedVendor.userId, tenantId }, {
+      onSuccess: () => toast({ title: 'Éxito', description: 'Asignación eliminada.' }),
+      onError: (e) => toast({ title: 'Error', description: e.message, variant: 'destructive' }),
+    });
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Vendedor Asignado</CardTitle>
+        <CardDescription>El vendedor que gestiona comercialmente este tenant.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <p className="text-sm text-muted-foreground">Cargando...</p>}
+        {!isLoading && assignedVendor && (
+          <div className="flex items-center justify-between p-2 border rounded-md">
+            <div>
+              <p className="font-medium">{assignedVendor.fullName || assignedVendor.email}</p>
+              <p className="text-xs text-muted-foreground">{assignedVendor.email}</p>
+            </div>
+            <Button size="icon" variant="outline" onClick={handleRemove} disabled={removeMutation.isPending}>
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        )}
+        {!isLoading && !assignedVendor && (
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" role="combobox" className="w-full justify-between">
+                Asignar vendedor...
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-full p-0">
+              <Command>
+                <CommandInput placeholder="Buscar vendedor..." />
+                <CommandEmpty>No se encontraron vendedores.</CommandEmpty>
+                <CommandGroup>
+                  {vendors.map((v) => (
+                    <CommandItem key={v.user_id} onSelect={() => handleAssign(v.user_id)}>
+                      <Check className="mr-2 h-4 w-4 opacity-0" />
+                      {v.full_name || v.email}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function TenantDetails() {
   const { tenantId, platformId } = useParams<{ tenantId: string; platformId?: string }>();
   const navigate = useNavigate();
+  const { currentAssignment } = useAuth();
+  const canManageVendorAssignment = ['super_admin', 'app_super_admin', 'comercial_admin'].includes(currentAssignment?.role || '');
 
   if (!tenantId) {
     return <div className="p-4">ID de Tenant no encontrado.</div>;
@@ -96,9 +185,11 @@ export default function TenantDetails() {
         </CardContent>
       </Card>
 
+      {canManageVendorAssignment && <AssignedVendorCard tenantId={tenantId} />}
+
       <TenantSubscriptionsManager tenantId={tenantId} />
 
-      <TenantIntegrationManager 
+      <TenantIntegrationManager
         tenantId={tenantId} 
         platformId={tenant?.platform_id || tenant?.platform?.id || ''} 
       />

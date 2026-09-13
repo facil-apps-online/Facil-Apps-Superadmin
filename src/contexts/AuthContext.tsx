@@ -164,6 +164,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode; supabaseClient:
       case 'vendor':
         navigate('/commissions');
         break;
+      case 'comercial_admin':
+        navigate('/crm/prospects');
+        break;
       case 'super_admin':
       case 'app_super_admin':
         navigate('/');

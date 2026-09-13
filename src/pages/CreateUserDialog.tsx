@@ -31,7 +31,7 @@ type FormData = {
   lastName: string;
   email: string;
   password?: string;
-  role: 'super_admin' | 'app_super_admin' | 'investor' | 'vendor';
+  role: 'super_admin' | 'app_super_admin' | 'comercial_admin' | 'investor' | 'vendor';
   appSuperAdminPlatforms: string[];
   investorPlatforms: { platformId: string; stake: number }[];
 };
@@ -60,7 +60,7 @@ export function CreateUserDialog({ isOpen, onOpenChange }: CreateUserDialogProps
 
   const onSubmit = (data: FormData) => {
     let assignments: any;
-    if (data.role === 'app_super_admin') {
+    if (data.role === 'app_super_admin' || data.role === 'comercial_admin') {
       assignments = data.appSuperAdminPlatforms;
     } else if (data.role === 'investor') {
       assignments = data.investorPlatforms;
@@ -136,6 +136,7 @@ export function CreateUserDialog({ isOpen, onOpenChange }: CreateUserDialogProps
                     <SelectContent>
                       <SelectItem value="super_admin">Super Admin</SelectItem>
                       <SelectItem value="app_super_admin">App Super Admin</SelectItem>
+                      <SelectItem value="comercial_admin">Administrador Comercial</SelectItem>
                       <SelectItem value="investor">Investor</SelectItem>
                       <SelectItem value="vendor">Vendor</SelectItem>
                     </SelectContent>
@@ -145,9 +146,9 @@ export function CreateUserDialog({ isOpen, onOpenChange }: CreateUserDialogProps
               {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
             </div>
 
-            {selectedRole === 'app_super_admin' && (
+            {(selectedRole === 'app_super_admin' || selectedRole === 'comercial_admin') && (
               <Card className="mt-4">
-                <CardHeader><CardTitle>Plataformas para App Super Admin</CardTitle></CardHeader>
+                <CardHeader><CardTitle>Plataformas para {selectedRole === 'comercial_admin' ? 'Administrador Comercial' : 'App Super Admin'}</CardTitle></CardHeader>
                 <CardContent>
                   <Controller
                     control={control}

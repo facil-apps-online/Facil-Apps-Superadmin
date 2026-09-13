@@ -32,7 +32,7 @@ interface RolesTabProps {
 }
 
 type AddAssignmentFormData = {
-  role: 'super_admin' | 'app_super_admin' | 'investor' | 'vendor' | '';
+  role: 'super_admin' | 'app_super_admin' | 'comercial_admin' | 'investor' | 'vendor' | '';
   appSuperAdminPlatforms: string[];
   investorPlatforms: { platformId: string; stake: number }[];
   vendorPlatforms: { platformId: string; first_payment_commission_rate: number; recurring_payment_commission_rate: number; }[];
@@ -87,11 +87,12 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
                 });
                 break;
             case 'app_super_admin':
+            case 'comercial_admin':
             case 'investor':
-                const assignments = data.role === 'investor' 
-                    ? data.investorPlatforms 
+                const assignments = data.role === 'investor'
+                    ? data.investorPlatforms
                     : data.appSuperAdminPlatforms.map(p_id => ({platform_id: p_id}));
-                
+
                 if (assignments.length === 0) {
                     toast({ title: 'Error', description: 'Debes seleccionar al menos una plataforma.', variant: 'destructive' });
                     return;
@@ -125,6 +126,7 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
                                     <SelectContent>
                                         <SelectItem value="super_admin">Super Admin</SelectItem>
                                         <SelectItem value="app_super_admin">App Super Admin</SelectItem>
+                                        <SelectItem value="comercial_admin">Administrador Comercial</SelectItem>
                                         <SelectItem value="investor">Investor</SelectItem>
                                         <SelectItem value="vendor">Vendor</SelectItem>
                                     </SelectContent>
@@ -133,7 +135,7 @@ function AddAssignment({ user }: { user: PlatformAssignment }) {
                         />
                     </div>
 
-                    {selectedRole === 'app_super_admin' && (
+                    {(selectedRole === 'app_super_admin' || selectedRole === 'comercial_admin') && (
                         <Controller
                             control={control}
                             name="appSuperAdminPlatforms"
@@ -313,7 +315,7 @@ function VendorCommissions({ commissions }: { commissions: VendorPlatformCommiss
 export function RolesTab({ user }: RolesTabProps) {
   const { toast } = useToast();
   const [editedStakes, setEditedStakes] = useState<Record<string, number>>({});
-  const [deleteAlert, setDeleteAlert] = useState<{ isOpen: boolean; platformId: string; role: 'investor' | 'app_super_admin' } | null>(null);
+  const [deleteAlert, setDeleteAlert] = useState<{ isOpen: boolean; platformId: string; role: 'investor' | 'app_super_admin' | 'comercial_admin' } | null>(null);
 
   const updateStakeMutation = useUpdateInvestorStake();
   const removeAssignmentMutation = useRemovePlatformAssignment();
@@ -335,7 +337,7 @@ export function RolesTab({ user }: RolesTabProps) {
     });
   };
 
-  const confirmRemoveAssignment = (platformId: string, role: 'investor' | 'app_super_admin') => {
+  const confirmRemoveAssignment = (platformId: string, role: 'investor' | 'app_super_admin' | 'comercial_admin') => {
     setDeleteAlert({ isOpen: true, platformId, role });
   };
 
@@ -355,7 +357,7 @@ export function RolesTab({ user }: RolesTabProps) {
     });
   };
 
-  const hasAssignments = (user.platform_roles?.investor?.length || 0) > 0 || (user.platform_roles?.app_super_admin?.length || 0) > 0 || (user.platform_roles?.vendor?.length || 0) > 0;
+  const hasAssignments = (user.platform_roles?.investor?.length || 0) > 0 || (user.platform_roles?.app_super_admin?.length || 0) > 0 || (user.platform_roles?.comercial_admin?.length || 0) > 0 || (user.platform_roles?.vendor?.length || 0) > 0;
 
   return (
     <div className="space-y-6 py-4">
@@ -407,6 +409,25 @@ export function RolesTab({ user }: RolesTabProps) {
               <div key={p.platform_id} className="flex items-center justify-between p-2 border rounded-md">
                 <div className="font-medium">{p.platform_name}</div>
                 <Button size="icon" variant="outline" onClick={() => confirmRemoveAssignment(p.platform_id, 'app_super_admin')} disabled={removeAssignmentMutation.isPending}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {user.platform_roles?.comercial_admin && user.platform_roles.comercial_admin.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Asignaciones de Administrador Comercial</CardTitle>
+            <CardDescription>Revoca el acceso de administrador comercial a una plataforma.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {user.platform_roles.comercial_admin.map(p => (
+              <div key={p.platform_id} className="flex items-center justify-between p-2 border rounded-md">
+                <div className="font-medium">{p.platform_name}</div>
+                <Button size="icon" variant="outline" onClick={() => confirmRemoveAssignment(p.platform_id, 'comercial_admin')} disabled={removeAssignmentMutation.isPending}>
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
