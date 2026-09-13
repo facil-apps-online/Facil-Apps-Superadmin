@@ -26,3 +26,13 @@ export const useInviteTeamMember = () => {
     },
   });
 };
+
+const resendTeamInvitation = async (userId: string): Promise<{ success: true }> => {
+  return invokeCoreAction('resend_superadmin_team_invitation', { userId });
+};
+
+export const useResendTeamInvitation = () => {
+  return useMutation<{ success: true }, Error, string>({
+    mutationFn: resendTeamInvitation,
+  });
+};

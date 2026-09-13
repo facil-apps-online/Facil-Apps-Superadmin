@@ -10,6 +10,7 @@ export interface PlatformAssignment {
   first_name: string | null;
   last_name: string | null;
   email: string;
+  is_pending?: boolean;
   platform_roles: {
     app_super_admin?: { platform_id: string; platform_name: string; }[];
     comercial_admin?: { platform_id: string; platform_name: string; }[];

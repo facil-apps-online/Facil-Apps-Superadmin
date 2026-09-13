@@ -67,7 +67,10 @@ export default function AcceptInvitation() {
   const onSubmit = async (values: FormValues) => {
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.updateUser({ password: values.password });
+      const { error } = await supabase.auth.updateUser({
+        password: values.password,
+        data: { invitation_pending: false },
+      });
       if (error) throw error;
       toast({ title: '¡Listo!', description: 'Tu contraseña quedó creada. Ya puedes usar el portal.' });
       navigate('/');
