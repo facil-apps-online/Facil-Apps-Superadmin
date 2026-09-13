@@ -42,10 +42,11 @@ const fetchPlatformLevelAssignments = async (): Promise<PlatformAssignment[]> =>
   return invokeCoreAction('get_platform_level_assignments');
 };
 
-export const usePlatformLevelAssignments = () => {
+export const usePlatformLevelAssignments = (enabled: boolean = true) => {
   return useQuery<PlatformAssignment[], Error>({
     queryKey: ['platformLevelAssignments'],
     queryFn: fetchPlatformLevelAssignments,
+    enabled,
   });
 };
 

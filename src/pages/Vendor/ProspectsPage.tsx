@@ -118,7 +118,7 @@ export default function ProspectsPage() {
 
   const { data: allPlatforms } = usePlatforms();
   const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
-  const { data: assignments } = usePlatformLevelAssignments();
+  const { data: assignments } = usePlatformLevelAssignments(isAdmin);
 
   const vendors = useMemo(() => {
     if (!isAdmin || !assignments) return [];

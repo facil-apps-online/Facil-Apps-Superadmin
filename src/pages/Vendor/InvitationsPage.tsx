@@ -102,7 +102,7 @@ function InvitationCard({ invitation }: { invitation: VendorInvitation }) {
 export default function InvitationsPage() {
   const { currentAssignment } = useAuth();
   const role = currentAssignment?.role;
-  const isAdmin = role === 'super_admin' || role === 'app_super_admin';
+  const isAdmin = role === 'super_admin' || role === 'app_super_admin' || role === 'comercial_admin';
 
   const [platformId, setPlatformId] = useState<string>('all');
   const [vendorUserId, setVendorUserId] = useState<string>('all');
@@ -110,7 +110,7 @@ export default function InvitationsPage() {
 
   const { data: allPlatforms } = usePlatforms();
   const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
-  const { data: assignments } = usePlatformLevelAssignments();
+  const { data: assignments } = usePlatformLevelAssignments(isAdmin);
 
   const vendors = useMemo(() => {
     if (!isAdmin || !assignments) return [];

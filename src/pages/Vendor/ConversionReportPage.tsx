@@ -19,7 +19,7 @@ export default function ConversionReportPage() {
   const [platformId, setPlatformId] = useState<string>('all');
   const { data: allPlatforms } = usePlatforms();
   const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
-  const { data: assignments } = usePlatformLevelAssignments();
+  const { data: assignments } = usePlatformLevelAssignments(isAdmin);
 
   const vendorNames = useMemo(() => {
     const map = new Map<string, string>();
