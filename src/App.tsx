@@ -35,9 +35,11 @@ import VendorDashboard from '@/pages/VendorDashboard';
 import InvitationsPage from '@/pages/Vendor/InvitationsPage';
 import ProspectsPage from '@/pages/Vendor/ProspectsPage';
 import ConversionReportPage from '@/pages/Vendor/ConversionReportPage';
+import TeamPage from '@/pages/Vendor/TeamPage';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
 import AuthCallback from '@/pages/AuthCallback';
 import SetupSuperadmin from '@/pages/SetupSuperadmin';
+import AcceptInvitation from '@/pages/AcceptInvitation';
 import AppInitializer from '@/components/AppInitializer';
 import InvestorDashboard from '@/pages/InvestorDashboard';
 
@@ -60,6 +62,7 @@ function App() {
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/setup-superadmin" element={<SetupSuperadmin />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
+              <Route path="/invitacion" element={<AcceptInvitation />} />
               
 
               {/* Rutas Protegidas (usando tu componente ProtectedRoute) */}
@@ -103,6 +106,7 @@ function App() {
                   <Route path="/crm/prospects" element={<ProspectsPage />} />
                   <Route path="/conversion" element={<ConversionReportPage />} />
                   <Route path="/crm/conversion" element={<ConversionReportPage />} />
+                  <Route path="/crm/team" element={<TeamPage />} />
                   {/* Aquí irían el resto de tus rutas protegidas */}
                 </Route>
               </Route>

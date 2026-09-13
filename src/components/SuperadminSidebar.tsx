@@ -24,6 +24,7 @@ import {
   DollarSign,
   Mail,
   TrendingUp,
+  UserPlus,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -178,6 +179,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         <Link to="/crm/conversion" onClick={handleLinkClick}>
                             <TrendingUp />
                             <span>Conversión</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Mi Equipo">
+                        <Link to="/crm/team" onClick={handleLinkClick}>
+                            <UserPlus />
+                            <span>Mi Equipo</span>
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
