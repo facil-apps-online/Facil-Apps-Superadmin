@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -26,13 +26,13 @@ const formSchema = z.object({
 
 type FormValues = z.infer<typeof formSchema>;
 
-type SessionState = 'checking' | 'ready' | 'invalid';
-
 export default function AcceptInvitation() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [sessionState, setSessionState] = useState<SessionState>('checking');
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token');
   const [submitting, setSubmitting] = useState(false);
+  const [done, setDone] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -41,39 +41,16 @@ export default function AcceptInvitation() {
 
   const watchedPassword = form.watch('password');
 
-  useEffect(() => {
-    const establishSession = async () => {
-      const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : window.location.hash;
-      const params = new URLSearchParams(hash);
-      const accessToken = params.get('access_token');
-      const refreshToken = params.get('refresh_token');
-
-      if (!accessToken || !refreshToken) {
-        setSessionState('invalid');
-        return;
-      }
-
-      const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-      if (error) {
-        setSessionState('invalid');
-        return;
-      }
-      setSessionState('ready');
-    };
-
-    establishSession();
-  }, []);
-
   const onSubmit = async (values: FormValues) => {
+    if (!token) return;
     setSubmitting(true);
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: values.password,
-        data: { invitation_pending: false },
+      const { data, error } = await supabase.functions.invoke('core-actions', {
+        body: { action: 'accept_superadmin_invitation', payload: { token, password: values.password } },
       });
       if (error) throw error;
-      toast({ title: '¡Listo!', description: 'Tu contraseña quedó creada. Ya puedes usar el portal.' });
-      navigate('/');
+      if (data?.success === false) throw new Error(data.message);
+      setDone(true);
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
@@ -81,24 +58,30 @@ export default function AcceptInvitation() {
     }
   };
 
-  if (sessionState === 'checking') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (sessionState === 'invalid') {
+  if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl">Link inválido o vencido</CardTitle>
-            <CardDescription>
-              Este enlace de invitación ya no es válido. Pide a quien te invitó que te reenvíe la invitación.
-            </CardDescription>
+            <CardTitle className="text-2xl">Link inválido</CardTitle>
+            <CardDescription>Este enlace no tiene un token de invitación válido.</CardDescription>
           </CardHeader>
+        </Card>
+      </div>
+    );
+  }
+
+  if (done) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 p-4">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-2xl">¡Contraseña creada!</CardTitle>
+            <CardDescription>Ya puedes iniciar sesión con tu correo y tu nueva contraseña.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button className="w-full" onClick={() => navigate('/auth')}>Ir a Iniciar Sesión</Button>
+          </CardContent>
         </Card>
       </div>
     );
@@ -131,7 +114,7 @@ export default function AcceptInvitation() {
               )} />
               <Button type="submit" className="w-full" disabled={submitting}>
                 {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Crear contraseña y entrar
+                Crear contraseña
               </Button>
             </form>
           </Form>

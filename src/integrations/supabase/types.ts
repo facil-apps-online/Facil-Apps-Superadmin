@@ -2054,6 +2054,33 @@ export type Database = {
           },
         ]
       }
+      superadmin_invitation_tokens: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          token_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at: string
+          id?: string
+          token_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          token_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       system_alerts: {
         Row: {
           created_at: string | null
@@ -2989,9 +3016,10 @@ export type Database = {
           email: string
           first_name: string
           full_name: string
-          id: string
+          is_pending: boolean
           last_name: string
           platform_roles: Json
+          user_id: string
         }[]
       }
       get_platforms_stats: {
