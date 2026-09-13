@@ -22,6 +22,7 @@ import {
   Activity,
   Puzzle,
   DollarSign,
+  Mail,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -66,6 +67,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                     <Link to="/commissions" onClick={handleLinkClick}>
                         <DollarSign />
                         <span>Comisiones</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Invitaciones">
+                    <Link to="/invitations" onClick={handleLinkClick}>
+                        <Mail />
+                        <span>Invitaciones</span>
                     </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -123,6 +132,22 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         </SidebarMenuButton>
                         </SidebarMenuItem>
                     )}
+                    </SidebarMenu>
+                </SidebarGroup>
+                )}
+
+                {(role === 'super_admin' || role === 'app_super_admin') && (
+                <SidebarGroup>
+                    <SidebarGroupLabel>CRM Comercial</SidebarGroupLabel>
+                    <SidebarMenu>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Invitaciones">
+                        <Link to="/crm/invitations" onClick={handleLinkClick}>
+                            <Mail />
+                            <span>Invitaciones</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
                     </SidebarMenu>
                 </SidebarGroup>
                 )}

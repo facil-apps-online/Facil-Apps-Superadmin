@@ -32,6 +32,7 @@ import EditTenant from '@/pages/EditTenant';
 import TenantDetails from '@/pages/TenantDetails';
 import GlobalSettings from '@/pages/Settings/GlobalSettings';
 import VendorDashboard from '@/pages/VendorDashboard';
+import InvitationsPage from '@/pages/Vendor/InvitationsPage';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
 import AuthCallback from '@/pages/AuthCallback';
 import SetupSuperadmin from '@/pages/SetupSuperadmin';
@@ -94,6 +95,8 @@ function App() {
                   <Route path="/global-settings" element={<GlobalSettings />} />
                   <Route path="/profile-settings" element={<ProfileSettings />} />
                   <Route path="/commissions" element={<VendorDashboard />} />
+                  <Route path="/invitations" element={<InvitationsPage />} />
+                  <Route path="/crm/invitations" element={<InvitationsPage />} />
                   {/* Aquí irían el resto de tus rutas protegidas */}
                 </Route>
               </Route>
