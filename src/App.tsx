@@ -34,6 +34,7 @@ import GlobalSettings from '@/pages/Settings/GlobalSettings';
 import VendorDashboard from '@/pages/VendorDashboard';
 import InvitationsPage from '@/pages/Vendor/InvitationsPage';
 import ProspectsPage from '@/pages/Vendor/ProspectsPage';
+import ConversionReportPage from '@/pages/Vendor/ConversionReportPage';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
 import AuthCallback from '@/pages/AuthCallback';
 import SetupSuperadmin from '@/pages/SetupSuperadmin';
@@ -100,6 +101,8 @@ function App() {
                   <Route path="/crm/invitations" element={<InvitationsPage />} />
                   <Route path="/prospects" element={<ProspectsPage />} />
                   <Route path="/crm/prospects" element={<ProspectsPage />} />
+                  <Route path="/conversion" element={<ConversionReportPage />} />
+                  <Route path="/crm/conversion" element={<ConversionReportPage />} />
                   {/* Aquí irían el resto de tus rutas protegidas */}
                 </Route>
               </Route>

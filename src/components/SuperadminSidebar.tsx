@@ -23,6 +23,7 @@ import {
   Puzzle,
   DollarSign,
   Mail,
+  TrendingUp,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -83,6 +84,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                     <Link to="/prospects" onClick={handleLinkClick}>
                         <Users />
                         <span>Prospectos</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild tooltip="Mi Conversión">
+                    <Link to="/conversion" onClick={handleLinkClick}>
+                        <TrendingUp />
+                        <span>Mi Conversión</span>
                     </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -161,6 +170,14 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         <Link to="/crm/invitations" onClick={handleLinkClick}>
                             <Mail />
                             <span>Invitaciones</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Conversión">
+                        <Link to="/crm/conversion" onClick={handleLinkClick}>
+                            <TrendingUp />
+                            <span>Conversión</span>
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

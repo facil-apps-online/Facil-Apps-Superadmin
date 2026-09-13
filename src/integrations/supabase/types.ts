@@ -2595,13 +2595,21 @@ export type Database = {
       }
       vendor_invitations: {
         Row: {
+          billing_address: string | null
           company_name: string | null
           created_at: string
+          einvoicing_email: string | null
           expires_at: string
           id: string
           invite_token: string
           invite_url: string
+          legal_name: string | null
           notes: string | null
+          physical_address_line1: string | null
+          physical_address_line2: string | null
+          physical_city: string | null
+          physical_postal_code: string | null
+          physical_state: string | null
           platform_id: string
           prospect_email: string | null
           prospect_first_name: string
@@ -2613,15 +2621,25 @@ export type Database = {
           trial_days_override: number | null
           updated_at: string
           vendor_user_id: string
+          website: string | null
+          whatsapp_phone: string | null
         }
         Insert: {
+          billing_address?: string | null
           company_name?: string | null
           created_at?: string
+          einvoicing_email?: string | null
           expires_at?: string
           id?: string
           invite_token: string
           invite_url: string
+          legal_name?: string | null
           notes?: string | null
+          physical_address_line1?: string | null
+          physical_address_line2?: string | null
+          physical_city?: string | null
+          physical_postal_code?: string | null
+          physical_state?: string | null
           platform_id: string
           prospect_email?: string | null
           prospect_first_name: string
@@ -2633,15 +2651,25 @@ export type Database = {
           trial_days_override?: number | null
           updated_at?: string
           vendor_user_id: string
+          website?: string | null
+          whatsapp_phone?: string | null
         }
         Update: {
+          billing_address?: string | null
           company_name?: string | null
           created_at?: string
+          einvoicing_email?: string | null
           expires_at?: string
           id?: string
           invite_token?: string
           invite_url?: string
+          legal_name?: string | null
           notes?: string | null
+          physical_address_line1?: string | null
+          physical_address_line2?: string | null
+          physical_city?: string | null
+          physical_postal_code?: string | null
+          physical_state?: string | null
           platform_id?: string
           prospect_email?: string | null
           prospect_first_name?: string
@@ -2653,6 +2681,8 @@ export type Database = {
           trial_days_override?: number | null
           updated_at?: string
           vendor_user_id?: string
+          website?: string | null
+          whatsapp_phone?: string | null
         }
         Relationships: [
           {
@@ -2749,49 +2779,82 @@ export type Database = {
       }
       vendor_prospects: {
         Row: {
+          billing_address: string | null
           company_name: string | null
           created_at: string
+          einvoicing_email: string | null
           email: string | null
           first_name: string
           id: string
           invitation_id: string | null
           last_name: string | null
           last_visit_at: string | null
+          legal_name: string | null
           phone: string | null
+          physical_address_line1: string | null
+          physical_address_line2: string | null
+          physical_city: string | null
+          physical_postal_code: string | null
+          physical_state: string | null
           platform_id: string
           status: string
+          tax_id: string | null
           updated_at: string
           vendor_user_id: string
+          website: string | null
+          whatsapp_phone: string | null
         }
         Insert: {
+          billing_address?: string | null
           company_name?: string | null
           created_at?: string
+          einvoicing_email?: string | null
           email?: string | null
           first_name: string
           id?: string
           invitation_id?: string | null
           last_name?: string | null
           last_visit_at?: string | null
+          legal_name?: string | null
           phone?: string | null
+          physical_address_line1?: string | null
+          physical_address_line2?: string | null
+          physical_city?: string | null
+          physical_postal_code?: string | null
+          physical_state?: string | null
           platform_id: string
           status?: string
+          tax_id?: string | null
           updated_at?: string
           vendor_user_id: string
+          website?: string | null
+          whatsapp_phone?: string | null
         }
         Update: {
+          billing_address?: string | null
           company_name?: string | null
           created_at?: string
+          einvoicing_email?: string | null
           email?: string | null
           first_name?: string
           id?: string
           invitation_id?: string | null
           last_name?: string | null
           last_visit_at?: string | null
+          legal_name?: string | null
           phone?: string | null
+          physical_address_line1?: string | null
+          physical_address_line2?: string | null
+          physical_city?: string | null
+          physical_postal_code?: string | null
+          physical_state?: string | null
           platform_id?: string
           status?: string
+          tax_id?: string | null
           updated_at?: string
           vendor_user_id?: string
+          website?: string | null
+          whatsapp_phone?: string | null
         }
         Relationships: [
           {

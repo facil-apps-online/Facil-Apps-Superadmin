@@ -35,6 +35,16 @@ export interface VendorInvitation {
   prospect_phone: string | null;
   company_name: string | null;
   tax_id: string | null;
+  legal_name: string | null;
+  whatsapp_phone: string | null;
+  billing_address: string | null;
+  einvoicing_email: string | null;
+  physical_address_line1: string | null;
+  physical_address_line2: string | null;
+  physical_city: string | null;
+  physical_state: string | null;
+  physical_postal_code: string | null;
+  website: string | null;
   invite_token: string;
   invite_url: string;
   status: InvitationStatus;

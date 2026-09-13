@@ -19,6 +19,21 @@ export const PROSPECT_STATUSES: { id: ProspectStatus; label: string }[] = [
   { id: 'convertido', label: 'Convertido' },
 ];
 
+/** Datos de negocio compartidos con vendor_invitations (mismo set que pide "Crear Tenant",
+ * menos las credenciales del admin) — capturados desde el primer contacto. */
+export interface ProspectBusinessDetails {
+  legalName?: string;
+  whatsappPhone?: string;
+  billingAddress?: string;
+  einvoicingEmail?: string;
+  physicalAddressLine1?: string;
+  physicalAddressLine2?: string;
+  physicalCity?: string;
+  physicalState?: string;
+  physicalPostalCode?: string;
+  website?: string;
+}
+
 export interface VendorProspect {
   id: string;
   vendor_user_id: string;
@@ -29,6 +44,17 @@ export interface VendorProspect {
   phone: string | null;
   email: string | null;
   company_name: string | null;
+  tax_id: string | null;
+  legal_name: string | null;
+  whatsapp_phone: string | null;
+  billing_address: string | null;
+  einvoicing_email: string | null;
+  physical_address_line1: string | null;
+  physical_address_line2: string | null;
+  physical_city: string | null;
+  physical_state: string | null;
+  physical_postal_code: string | null;
+  website: string | null;
   status: ProspectStatus;
   last_visit_at: string | null;
   invitation_id: string | null;
@@ -65,16 +91,19 @@ export const useVendorProspects = (filters: ListFilters = {}) => {
   });
 };
 
+export interface ProspectFormFields extends ProspectBusinessDetails {
+  firstName: string;
+  lastName?: string;
+  email?: string;
+  phone?: string;
+  companyName?: string;
+  taxId?: string;
+}
+
 export interface CreateProspectPayload {
   platformId: string;
   vendorUserId?: string;
-  prospect: {
-    firstName: string;
-    lastName?: string;
-    email?: string;
-    phone?: string;
-    companyName?: string;
-  };
+  prospect: ProspectFormFields;
 }
 
 const createVendorProspect = async (payload: CreateProspectPayload): Promise<VendorProspect> => {
@@ -85,6 +114,25 @@ export const useCreateVendorProspect = () => {
   const queryClient = useQueryClient();
   return useMutation<VendorProspect, Error, CreateProspectPayload>({
     mutationFn: createVendorProspect,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendorProspects'] });
+    },
+  });
+};
+
+interface UpdateProspectPayload {
+  prospectId: string;
+  prospect: Partial<ProspectFormFields>;
+}
+
+const updateVendorProspect = async (payload: UpdateProspectPayload): Promise<VendorProspect> => {
+  return invokeCoreAction('update_vendor_prospect', payload);
+};
+
+export const useUpdateVendorProspect = () => {
+  const queryClient = useQueryClient();
+  return useMutation<VendorProspect, Error, UpdateProspectPayload>({
+    mutationFn: updateVendorProspect,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendorProspects'] });
     },
@@ -158,5 +206,33 @@ export const useConvertVendorProspectToInvitation = () => {
       queryClient.invalidateQueries({ queryKey: ['vendorInvitations'] });
       queryClient.invalidateQueries({ queryKey: ['vendorInvitationFunnel'] });
     },
+  });
+};
+
+export interface VendorConversionStats {
+  vendorUserId: string;
+  prospectsTotal: number;
+  prospectsConverted: number;
+  invitationsTotal: number;
+  invitationsAccountCreated: number;
+  invitationsActive: number;
+  invitationsPaying: number;
+  invitationsLostOrDuplicate: number;
+}
+
+interface ConversionReportFilters {
+  vendorUserId?: string;
+  platformId?: string;
+}
+
+const fetchVendorConversionReport = async (filters: ConversionReportFilters): Promise<VendorConversionStats[]> => {
+  const data = await invokeCoreAction('get_vendor_conversion_report', filters);
+  return data || [];
+};
+
+export const useVendorConversionReport = (filters: ConversionReportFilters = {}) => {
+  return useQuery<VendorConversionStats[], Error>({
+    queryKey: ['vendorConversionReport', filters],
+    queryFn: () => fetchVendorConversionReport(filters),
   });
 };

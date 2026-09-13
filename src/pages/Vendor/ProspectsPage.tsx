@@ -68,6 +68,7 @@ function ProspectCard({ prospect }: { prospect: VendorProspect }) {
         )}
         <div className="flex items-center gap-1">
           <ProspectVisitsDialog prospect={prospect} />
+          <CreateProspectDialog prospect={prospect} />
           {prospect.status !== 'convertido' && (
             <Button size="sm" variant="ghost" onClick={handleConvert} disabled={convertMutation.isPending}>
               <ArrowRightCircle className="mr-1 h-3.5 w-3.5" /> Invitar
