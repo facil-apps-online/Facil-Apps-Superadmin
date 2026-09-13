@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {
@@ -13,19 +13,22 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useInviteTeamMember } from '@/hooks/useTeamInvite';
-import { UserPlus } from 'lucide-react';
+import { UserPlus, PlusCircle, Trash2 } from 'lucide-react';
 
 const formSchema = z.object({
   fullName: z.string().min(1, 'El nombre es requerido'),
   email: z.string().email('Email inválido'),
-  platformId: z.string().min(1, 'Selecciona una plataforma'),
-  firstPaymentCommissionRate: z.coerce.number().min(0).max(100),
-  recurringPaymentCommissionRate: z.coerce.number().min(0).max(100),
+  platforms: z.array(z.object({
+    platformId: z.string().min(1, 'Selecciona una plataforma'),
+    firstPaymentCommissionRate: z.coerce.number().min(0).max(100),
+    recurringPaymentCommissionRate: z.coerce.number().min(0).max(100),
+  })).min(1, 'Agrega al menos una plataforma'),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -39,8 +42,14 @@ export function InviteTeamMemberDialog() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { fullName: '', email: '', platformId: '', firstPaymentCommissionRate: 50, recurringPaymentCommissionRate: 10 },
+    defaultValues: {
+      fullName: '',
+      email: '',
+      platforms: [{ platformId: '', firstPaymentCommissionRate: 50, recurringPaymentCommissionRate: 10 }],
+    },
   });
+
+  const { fields, append, remove } = useFieldArray({ control: form.control, name: 'platforms' });
 
   const onSubmit = (values: FormValues) => {
     inviteMutation.mutate(values, {
@@ -60,7 +69,7 @@ export function InviteTeamMemberDialog() {
           <UserPlus className="mr-2 h-4 w-4" /> Invitar Vendedor
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invitar Vendedor</DialogTitle>
           <DialogDescription>
@@ -75,31 +84,51 @@ export function InviteTeamMemberDialog() {
             <FormField control={form.control} name="email" render={({ field }) => (
               <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
             )} />
-            <FormField control={form.control} name="platformId" render={({ field }) => (
-              <FormItem>
-                <FormLabel>Plataforma que puede vender</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger><SelectValue placeholder="Selecciona una plataforma" /></SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {platforms?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormDescription>Podrás agregarle más plataformas después desde Roles.</FormDescription>
-                <FormMessage />
-              </FormItem>
-            )} />
-            <div className="grid grid-cols-2 gap-4">
-              <FormField control={form.control} name="firstPaymentCommissionRate" render={({ field }) => (
-                <FormItem><FormLabel>% Comisión 1er Pago</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
-              <FormField control={form.control} name="recurringPaymentCommissionRate" render={({ field }) => (
-                <FormItem><FormLabel>% Comisión Recurrente</FormLabel><FormControl><Input type="number" {...field} /></FormControl><FormMessage /></FormItem>
-              )} />
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label>Plataformas que puede vender</Label>
+                <Button type="button" size="sm" variant="outline" onClick={() => append({ platformId: '', firstPaymentCommissionRate: 50, recurringPaymentCommissionRate: 10 })}>
+                  <PlusCircle className="mr-2 h-4 w-4" /> Añadir
+                </Button>
+              </div>
+              {fields.map((item, index) => (
+                <div key={item.id} className="flex flex-wrap items-end gap-3 p-2 border rounded-md">
+                  <div className="flex-grow grid gap-1.5 min-w-[150px]">
+                    <Label className="text-xs text-muted-foreground">Plataforma</Label>
+                    <Controller
+                      control={form.control}
+                      name={`platforms.${index}.platformId`}
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <SelectTrigger><SelectValue placeholder="Plataforma" /></SelectTrigger>
+                          <SelectContent>
+                            {platforms?.map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs text-muted-foreground">% 1er Pago</Label>
+                    <Input type="number" className="w-24" {...form.register(`platforms.${index}.firstPaymentCommissionRate`, { valueAsNumber: true })} />
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label className="text-xs text-muted-foreground">% Recurrente</Label>
+                    <Input type="number" className="w-24" {...form.register(`platforms.${index}.recurringPaymentCommissionRate`, { valueAsNumber: true })} />
+                  </div>
+                  <Button type="button" variant="destructive" size="icon" onClick={() => remove(index)} disabled={fields.length === 1}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+              {form.formState.errors.platforms?.message && (
+                <p className="text-sm font-medium text-destructive">{form.formState.errors.platforms.message}</p>
+              )}
             </div>
+
             <DialogFooter>
               <Button type="submit" disabled={inviteMutation.isPending}>
                 {inviteMutation.isPending ? 'Enviando...' : 'Enviar Invitación'}

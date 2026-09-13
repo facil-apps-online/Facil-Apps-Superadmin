@@ -1,12 +1,16 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { invokeCoreAction } from '@/lib/api';
 
+export interface InviteTeamMemberPlatform {
+  platformId: string;
+  firstPaymentCommissionRate: number;
+  recurringPaymentCommissionRate: number;
+}
+
 export interface InviteTeamMemberPayload {
   email: string;
   fullName: string;
-  platformId: string;
-  firstPaymentCommissionRate?: number;
-  recurringPaymentCommissionRate?: number;
+  platforms: InviteTeamMemberPlatform[];
 }
 
 const inviteTeamMember = async (payload: InviteTeamMemberPayload): Promise<{ success: true; userId: string }> => {
