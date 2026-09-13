@@ -108,7 +108,8 @@ export default function InvitationsPage() {
   const [vendorUserId, setVendorUserId] = useState<string>('all');
   const [q, setQ] = useState('');
 
-  const { data: platforms } = usePlatforms();
+  const { data: allPlatforms } = usePlatforms();
+  const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
   const { data: assignments } = usePlatformLevelAssignments();
 
   const vendors = useMemo(() => {

@@ -17,7 +17,8 @@ export default function ConversionReportPage() {
   const isAdmin = role === 'super_admin' || role === 'app_super_admin' || role === 'comercial_admin';
 
   const [platformId, setPlatformId] = useState<string>('all');
-  const { data: platforms } = usePlatforms();
+  const { data: allPlatforms } = usePlatforms();
+  const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
   const { data: assignments } = usePlatformLevelAssignments();
 
   const vendorNames = useMemo(() => {

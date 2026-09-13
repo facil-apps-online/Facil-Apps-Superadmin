@@ -32,6 +32,8 @@ export interface ProspectBusinessDetails {
   physicalState?: string;
   physicalPostalCode?: string;
   website?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface VendorProspect {
@@ -55,6 +57,8 @@ export interface VendorProspect {
   physical_state: string | null;
   physical_postal_code: string | null;
   website: string | null;
+  latitude: number | null;
+  longitude: number | null;
   status: ProspectStatus;
   last_visit_at: string | null;
   next_visit_at: string | null;

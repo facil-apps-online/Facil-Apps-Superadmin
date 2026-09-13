@@ -2603,7 +2603,9 @@ export type Database = {
           id: string
           invite_token: string
           invite_url: string
+          latitude: number | null
           legal_name: string | null
+          longitude: number | null
           notes: string | null
           physical_address_line1: string | null
           physical_address_line2: string | null
@@ -2633,7 +2635,9 @@ export type Database = {
           id?: string
           invite_token: string
           invite_url: string
+          latitude?: number | null
           legal_name?: string | null
+          longitude?: number | null
           notes?: string | null
           physical_address_line1?: string | null
           physical_address_line2?: string | null
@@ -2663,7 +2667,9 @@ export type Database = {
           id?: string
           invite_token?: string
           invite_url?: string
+          latitude?: number | null
           legal_name?: string | null
+          longitude?: number | null
           notes?: string | null
           physical_address_line1?: string | null
           physical_address_line2?: string | null
@@ -2789,7 +2795,9 @@ export type Database = {
           invitation_id: string | null
           last_name: string | null
           last_visit_at: string | null
+          latitude: number | null
           legal_name: string | null
+          longitude: number | null
           next_visit_at: string | null
           phone: string | null
           physical_address_line1: string | null
@@ -2816,7 +2824,9 @@ export type Database = {
           invitation_id?: string | null
           last_name?: string | null
           last_visit_at?: string | null
+          latitude?: number | null
           legal_name?: string | null
+          longitude?: number | null
           next_visit_at?: string | null
           phone?: string | null
           physical_address_line1?: string | null
@@ -2843,7 +2853,9 @@ export type Database = {
           invitation_id?: string | null
           last_name?: string | null
           last_visit_at?: string | null
+          latitude?: number | null
           legal_name?: string | null
+          longitude?: number | null
           next_visit_at?: string | null
           phone?: string | null
           physical_address_line1?: string | null

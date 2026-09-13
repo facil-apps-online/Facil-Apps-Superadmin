@@ -16,10 +16,16 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Separator } from '@/components/ui/separator';
+import { AddressAutocompleteInput } from '@/components/AddressAutocompleteInput';
+import { MapDisplay } from '@/components/MapDisplay';
 import { useToast } from '@/hooks/use-toast';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { useCreateVendorProspect, useUpdateVendorProspect, VendorProspect } from '@/hooks/useVendorProspects';
 import { UserPlus, Pencil } from 'lucide-react';
+
+// El negocio de Facil Apps opera en Colombia; se restringe el autocompletado a ese país,
+// igual que se haría con el país del tenant en "Crear Tenant" (el prospecto aún no tiene uno).
+const PROSPECT_COUNTRY_RESTRICTION = 'CO';
 
 const formSchema = z.object({
   platformId: z.string().min(1, 'Selecciona una plataforma'),
@@ -39,6 +45,8 @@ const formSchema = z.object({
   physicalCity: z.string().optional(),
   physicalState: z.string().optional(),
   physicalPostalCode: z.string().optional(),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -47,6 +55,7 @@ const emptyValues: FormValues = {
   platformId: '', firstName: '', lastName: '', email: '', phone: '', companyName: '', taxId: '',
   legalName: '', whatsappPhone: '', website: '', billingAddress: '', einvoicingEmail: '',
   physicalAddressLine1: '', physicalAddressLine2: '', physicalCity: '', physicalState: '', physicalPostalCode: '',
+  latitude: null, longitude: null,
 };
 
 function prospectToFormValues(p: VendorProspect): FormValues {
@@ -68,6 +77,8 @@ function prospectToFormValues(p: VendorProspect): FormValues {
     physicalCity: p.physical_city || '',
     physicalState: p.physical_state || '',
     physicalPostalCode: p.physical_postal_code || '',
+    latitude: p.latitude,
+    longitude: p.longitude,
   };
 }
 
@@ -80,7 +91,8 @@ interface Props {
 export function CreateProspectDialog({ vendorUserId, prospect }: Props) {
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
-  const { data: platforms } = usePlatforms();
+  const { data: allPlatforms } = usePlatforms();
+  const platforms = (allPlatforms || []).filter((p) => p.status === 'production');
   const createMutation = useCreateVendorProspect();
   const updateMutation = useUpdateVendorProspect();
   const isEdit = !!prospect;
@@ -93,6 +105,21 @@ export function CreateProspectDialog({ vendorUserId, prospect }: Props) {
   useEffect(() => {
     if (open) form.reset(prospect ? prospectToFormValues(prospect) : emptyValues);
   }, [open, prospect]);
+
+  const watchedLat = form.watch('latitude');
+  const watchedLng = form.watch('longitude');
+
+  const handlePlaceSelected = (place: google.maps.places.PlaceResult) => {
+    const get = (type: string) => place.address_components?.find((c) => c.types.includes(type))?.long_name || '';
+    form.setValue('physicalAddressLine1', `${get('route')} ${get('street_number')}`.trim());
+    form.setValue('physicalCity', get('locality'));
+    form.setValue('physicalState', get('administrative_area_level_1'));
+    form.setValue('physicalPostalCode', get('postal_code'));
+    if (place.geometry?.location) {
+      form.setValue('latitude', place.geometry.location.lat());
+      form.setValue('longitude', place.geometry.location.lng());
+    }
+  };
 
   const onSubmit = (values: FormValues) => {
     const prospectData = {
@@ -112,6 +139,8 @@ export function CreateProspectDialog({ vendorUserId, prospect }: Props) {
       physicalCity: values.physicalCity || undefined,
       physicalState: values.physicalState || undefined,
       physicalPostalCode: values.physicalPostalCode || undefined,
+      latitude: values.latitude ?? undefined,
+      longitude: values.longitude ?? undefined,
     };
 
     const onSuccess = () => {
@@ -220,8 +249,23 @@ export function CreateProspectDialog({ vendorUserId, prospect }: Props) {
             <p className="text-sm font-medium text-muted-foreground">Dirección física (opcional)</p>
             <div className="grid grid-cols-2 gap-4">
               <FormField control={form.control} name="physicalAddressLine1" render={({ field }) => (
-                <FormItem className="col-span-2"><FormLabel>Dirección</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+                <FormItem className="col-span-2">
+                  <FormLabel>Dirección</FormLabel>
+                  <FormControl>
+                    <AddressAutocompleteInput
+                      onPlaceSelected={handlePlaceSelected}
+                      defaultValue={field.value}
+                      countryRestriction={PROSPECT_COUNTRY_RESTRICTION}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
               )} />
+              {(watchedLat && watchedLng) ? (
+                <div className="col-span-2 h-48">
+                  <MapDisplay latitude={watchedLat} longitude={watchedLng} />
+                </div>
+              ) : null}
               <FormField control={form.control} name="physicalAddressLine2" render={({ field }) => (
                 <FormItem className="col-span-2"><FormLabel>Dirección (línea 2)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
               )} />

@@ -116,7 +116,8 @@ export default function ProspectsPage() {
   const [q, setQ] = useState('');
   const [dueOnly, setDueOnly] = useState(false);
 
-  const { data: platforms } = usePlatforms();
+  const { data: allPlatforms } = usePlatforms();
+  const platforms = useMemo(() => (allPlatforms || []).filter((p) => p.status === 'production'), [allPlatforms]);
   const { data: assignments } = usePlatformLevelAssignments();
 
   const vendors = useMemo(() => {

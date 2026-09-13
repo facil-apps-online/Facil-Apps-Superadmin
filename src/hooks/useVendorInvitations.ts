@@ -45,6 +45,8 @@ export interface VendorInvitation {
   physical_state: string | null;
   physical_postal_code: string | null;
   website: string | null;
+  latitude: number | null;
+  longitude: number | null;
   invite_token: string;
   invite_url: string;
   status: InvitationStatus;
