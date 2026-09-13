@@ -11,6 +11,7 @@ export interface PlatformAssignment {
   last_name: string | null;
   email: string;
   is_pending?: boolean;
+  is_revoked?: boolean;
   platform_roles: {
     app_super_admin?: { platform_id: string; platform_name: string; }[];
     comercial_admin?: { platform_id: string; platform_name: string; }[];

@@ -1,18 +1,31 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { usePlatformLevelAssignments } from '@/hooks/usePlatformLevelAssignments';
-import { useResendTeamInvitation } from '@/hooks/useTeamInvite';
+import { usePlatformLevelAssignments, PlatformAssignment } from '@/hooks/usePlatformLevelAssignments';
+import { useResendTeamInvitation, useRevokeTeamMember, useReactivateTeamMember } from '@/hooks/useTeamInvite';
 import { InviteTeamMemberDialog } from './InviteTeamMemberDialog';
-import { Mail } from 'lucide-react';
+import { Mail, Ban, RotateCcw } from 'lucide-react';
 
 export default function TeamPage() {
   const { data: assignments, isLoading } = usePlatformLevelAssignments();
   const { toast } = useToast();
   const resendMutation = useResendTeamInvitation();
+  const revokeMutation = useRevokeTeamMember();
+  const reactivateMutation = useReactivateTeamMember();
+  const [revokeTarget, setRevokeTarget] = useState<PlatformAssignment | null>(null);
 
   const vendors = useMemo(
     () => (assignments || []).filter((a) => (a.platform_roles?.vendor?.length || 0) > 0),
@@ -22,6 +35,27 @@ export default function TeamPage() {
   const handleResend = (userId: string, email: string) => {
     resendMutation.mutate(userId, {
       onSuccess: () => toast({ title: 'Invitación reenviada', description: `Se envió un nuevo correo a ${email}.` }),
+      onError: (error) => toast({ title: 'Error', description: error.message, variant: 'destructive' }),
+    });
+  };
+
+  const handleConfirmRevoke = () => {
+    if (!revokeTarget) return;
+    revokeMutation.mutate(revokeTarget.user_id, {
+      onSuccess: () => {
+        toast({ title: 'Acceso revocado', description: `${revokeTarget.email} ya no puede iniciar sesión.` });
+        setRevokeTarget(null);
+      },
+      onError: (error) => {
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        setRevokeTarget(null);
+      },
+    });
+  };
+
+  const handleReactivate = (userId: string, email: string) => {
+    reactivateMutation.mutate(userId, {
+      onSuccess: () => toast({ title: 'Acceso reactivado', description: `${email} ya puede iniciar sesión de nuevo.` }),
       onError: (error) => toast({ title: 'Error', description: error.message, variant: 'destructive' }),
     });
   };
@@ -63,17 +97,30 @@ export default function TeamPage() {
                     ))}
                   </TableCell>
                   <TableCell>
-                    {v.is_pending ? (
+                    {v.is_revoked ? (
+                      <Badge variant="destructive">Revocado</Badge>
+                    ) : v.is_pending ? (
                       <Badge variant="secondary">Pendiente</Badge>
                     ) : (
                       <Badge variant="outline">Activo</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
-                    {v.is_pending && (
-                      <Button size="sm" variant="ghost" onClick={() => handleResend(v.user_id, v.email)} disabled={resendMutation.isPending}>
-                        <Mail className="mr-1 h-3.5 w-3.5" /> Reenviar invitación
+                  <TableCell className="text-right space-x-1">
+                    {v.is_revoked ? (
+                      <Button size="sm" variant="ghost" onClick={() => handleReactivate(v.user_id, v.email)} disabled={reactivateMutation.isPending}>
+                        <RotateCcw className="mr-1 h-3.5 w-3.5" /> Reactivar
                       </Button>
+                    ) : (
+                      <>
+                        {v.is_pending && (
+                          <Button size="sm" variant="ghost" onClick={() => handleResend(v.user_id, v.email)} disabled={resendMutation.isPending}>
+                            <Mail className="mr-1 h-3.5 w-3.5" /> Reenviar invitación
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" onClick={() => setRevokeTarget(v)} disabled={revokeMutation.isPending}>
+                          <Ban className="mr-1 h-3.5 w-3.5 text-destructive" /> Revocar
+                        </Button>
+                      </>
                     )}
                   </TableCell>
                 </TableRow>
@@ -85,6 +132,23 @@ export default function TeamPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!revokeTarget} onOpenChange={(isOpen) => !isOpen && setRevokeTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Revocar el acceso de {revokeTarget?.full_name || revokeTarget?.email}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              No podrá iniciar sesión hasta que lo reactives. Sus comisiones y plataformas asignadas se conservan.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmRevoke} disabled={revokeMutation.isPending}>
+              {revokeMutation.isPending ? 'Revocando...' : 'Revocar'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

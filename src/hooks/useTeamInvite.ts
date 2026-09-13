@@ -36,3 +36,31 @@ export const useResendTeamInvitation = () => {
     mutationFn: resendTeamInvitation,
   });
 };
+
+const revokeTeamMember = async (userId: string): Promise<{ success: true }> => {
+  return invokeCoreAction('revoke_superadmin_team_member', { userId });
+};
+
+export const useRevokeTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ success: true }, Error, string>({
+    mutationFn: revokeTeamMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
+    },
+  });
+};
+
+const reactivateTeamMember = async (userId: string): Promise<{ success: true }> => {
+  return invokeCoreAction('reactivate_superadmin_team_member', { userId });
+};
+
+export const useReactivateTeamMember = () => {
+  const queryClient = useQueryClient();
+  return useMutation<{ success: true }, Error, string>({
+    mutationFn: reactivateTeamMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['platformLevelAssignments'] });
+    },
+  });
+};
