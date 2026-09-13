@@ -2790,6 +2790,7 @@ export type Database = {
           last_name: string | null
           last_visit_at: string | null
           legal_name: string | null
+          next_visit_at: string | null
           phone: string | null
           physical_address_line1: string | null
           physical_address_line2: string | null
@@ -2816,6 +2817,7 @@ export type Database = {
           last_name?: string | null
           last_visit_at?: string | null
           legal_name?: string | null
+          next_visit_at?: string | null
           phone?: string | null
           physical_address_line1?: string | null
           physical_address_line2?: string | null
@@ -2842,6 +2844,7 @@ export type Database = {
           last_name?: string | null
           last_visit_at?: string | null
           legal_name?: string | null
+          next_visit_at?: string | null
           phone?: string | null
           physical_address_line1?: string | null
           physical_address_line2?: string | null

@@ -4,6 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +29,9 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { CreateProspectDialog } from './CreateProspectDialog';
 import { ProspectVisitsDialog } from './ProspectVisitsDialog';
-import { Trash2, ArrowRightCircle } from 'lucide-react';
+import { Trash2, ArrowRightCircle, Clock } from 'lucide-react';
+
+const isOverdue = (isoDate: string) => new Date(isoDate) < new Date(new Date().toDateString());
 
 function ProspectCard({ prospect }: { prospect: VendorProspect }) {
   const { toast } = useToast();
@@ -65,6 +69,12 @@ function ProspectCard({ prospect }: { prospect: VendorProspect }) {
         )}
         {prospect.last_visit_at && (
           <p className="text-xs text-muted-foreground">Última visita: {new Date(prospect.last_visit_at).toLocaleDateString('es-CO')}</p>
+        )}
+        {prospect.next_visit_at && (
+          <Badge variant={isOverdue(prospect.next_visit_at) ? 'destructive' : 'secondary'} className="gap-1">
+            <Clock className="h-3 w-3" />
+            Próxima visita: {new Date(prospect.next_visit_at).toLocaleDateString('es-CO')}
+          </Badge>
         )}
         <div className="flex items-center gap-1">
           <ProspectVisitsDialog prospect={prospect} />
@@ -104,6 +114,7 @@ export default function ProspectsPage() {
   const [platformId, setPlatformId] = useState<string>('all');
   const [vendorUserId, setVendorUserId] = useState<string>('all');
   const [q, setQ] = useState('');
+  const [dueOnly, setDueOnly] = useState(false);
 
   const { data: platforms } = usePlatforms();
   const { data: assignments } = usePlatformLevelAssignments();
@@ -117,6 +128,7 @@ export default function ProspectsPage() {
     platformId: platformId === 'all' ? undefined : platformId,
     vendorUserId: isAdmin && vendorUserId !== 'all' ? vendorUserId : undefined,
     q: q || undefined,
+    dueOnly: dueOnly || undefined,
   });
 
   const grouped = useMemo(() => {
@@ -160,29 +172,44 @@ export default function ProspectsPage() {
             </SelectContent>
           </Select>
         )}
+        <div className="flex items-center gap-2 ml-auto">
+          <Switch id="due-only" checked={dueOnly} onCheckedChange={setDueOnly} />
+          <Label htmlFor="due-only" className="text-sm cursor-pointer">Solo pendientes de hoy</Label>
+        </div>
       </div>
 
       {isLoading && <p className="text-muted-foreground">Cargando prospectos...</p>}
 
-      <div className="flex gap-4 overflow-x-auto pb-4">
-        {PROSPECT_STATUSES.map((s) => (
-          <div key={s.id} className="w-72 shrink-0">
-            <Card>
-              <CardHeader className="p-3 pb-2">
-                <CardTitle className="text-sm flex items-center justify-between">
-                  {s.label}
-                  <Badge variant="secondary">{grouped[s.id]?.length || 0}</Badge>
-                </CardTitle>
-              </CardHeader>
-            </Card>
-            <div className="mt-2">
-              {grouped[s.id]?.map((p) => (
-                <ProspectCard key={p.id} prospect={p} />
-              ))}
+      {dueOnly ? (
+        <div className="max-w-2xl space-y-3">
+          {(prospects || []).length === 0 && !isLoading && (
+            <p className="text-muted-foreground">No hay visitas pendientes para hoy. 🎉</p>
+          )}
+          {prospects?.map((p) => (
+            <ProspectCard key={p.id} prospect={p} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex gap-4 overflow-x-auto pb-4">
+          {PROSPECT_STATUSES.map((s) => (
+            <div key={s.id} className="w-72 shrink-0">
+              <Card>
+                <CardHeader className="p-3 pb-2">
+                  <CardTitle className="text-sm flex items-center justify-between">
+                    {s.label}
+                    <Badge variant="secondary">{grouped[s.id]?.length || 0}</Badge>
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <div className="mt-2">
+                {grouped[s.id]?.map((p) => (
+                  <ProspectCard key={p.id} prospect={p} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

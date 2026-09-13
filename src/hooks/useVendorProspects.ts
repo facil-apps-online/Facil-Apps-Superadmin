@@ -57,6 +57,7 @@ export interface VendorProspect {
   website: string | null;
   status: ProspectStatus;
   last_visit_at: string | null;
+  next_visit_at: string | null;
   invitation_id: string | null;
   created_at: string;
   updated_at: string;
@@ -77,6 +78,7 @@ interface ListFilters {
   platformId?: string;
   status?: ProspectStatus;
   q?: string;
+  dueOnly?: boolean;
 }
 
 const fetchVendorProspects = async (filters: ListFilters): Promise<VendorProspect[]> => {
@@ -171,6 +173,8 @@ interface LogVisitPayload {
   status: ProspectStatus;
   notes?: string;
   visitDate?: string;
+  /** Fecha del próximo seguimiento; enviar '' o undefined la deja sin cambios, no la borra. */
+  nextVisitDate?: string;
 }
 
 const logVendorProspectVisit = async (payload: LogVisitPayload): Promise<VendorProspectVisit> => {

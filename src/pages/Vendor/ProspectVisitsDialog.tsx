@@ -7,6 +7,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
@@ -25,13 +27,19 @@ export function ProspectVisitsDialog({ prospect }: { prospect: VendorProspect })
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState<ProspectStatus>(prospect.status);
   const [notes, setNotes] = useState('');
+  const [nextVisitDate, setNextVisitDate] = useState(() => (prospect.next_visit_at ? prospect.next_visit_at.slice(0, 10) : ''));
 
   const { data: visits, isLoading } = useVendorProspectVisits(open ? prospect.id : undefined);
   const logVisit = useLogVendorProspectVisit();
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    if (isOpen) setNextVisitDate(prospect.next_visit_at ? prospect.next_visit_at.slice(0, 10) : '');
+  };
+
   const handleLog = () => {
     logVisit.mutate(
-      { prospectId: prospect.id, status, notes: notes || undefined },
+      { prospectId: prospect.id, status, notes: notes || undefined, nextVisitDate },
       {
         onSuccess: () => {
           toast({ title: 'Éxito', description: 'Visita registrada.' });
@@ -43,8 +51,8 @@ export function ProspectVisitsDialog({ prospect }: { prospect: VendorProspect })
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <Button size="sm" variant="ghost" onClick={() => setOpen(true)}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <Button size="sm" variant="ghost" onClick={() => handleOpenChange(true)}>
         <History className="mr-1 h-3.5 w-3.5" /> Visitas
       </Button>
       <DialogContent className="sm:max-w-lg">
@@ -64,6 +72,10 @@ export function ProspectVisitsDialog({ prospect }: { prospect: VendorProspect })
             </SelectContent>
           </Select>
           <Textarea placeholder="Notas de la visita..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          <div className="grid gap-1">
+            <Label className="text-xs text-muted-foreground">Próxima visita (opcional)</Label>
+            <Input type="date" value={nextVisitDate} onChange={(e) => setNextVisitDate(e.target.value)} />
+          </div>
           <Button size="sm" onClick={handleLog} disabled={logVisit.isPending} className="w-full">
             {logVisit.isPending ? 'Guardando...' : 'Registrar Visita'}
           </Button>
