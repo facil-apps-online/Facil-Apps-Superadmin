@@ -45,9 +45,9 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/" onClick={handleLinkClick}>
-                <img 
-                  src="/placeholder.svg" 
-                  alt="Superadmin Logo" 
+                <img
+                  src="/logo-icon.png"
+                  alt="Facil Apps Online"
                   className="size-8"
                 />
                 <div className="grid flex-1 text-left text-sm leading-tight">
