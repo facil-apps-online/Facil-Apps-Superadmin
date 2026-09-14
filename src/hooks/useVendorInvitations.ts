@@ -70,10 +70,11 @@ const fetchVendorInvitations = async (filters: ListFilters): Promise<VendorInvit
   return data || [];
 };
 
-export const useVendorInvitations = (filters: ListFilters = {}) => {
+export const useVendorInvitations = (filters: ListFilters = {}, enabled: boolean = true) => {
   return useQuery<VendorInvitation[], Error>({
     queryKey: ['vendorInvitations', filters],
     queryFn: () => fetchVendorInvitations(filters),
+    enabled,
   });
 };
 

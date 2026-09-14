@@ -22,7 +22,6 @@ import {
   Activity,
   Puzzle,
   DollarSign,
-  Mail,
   TrendingUp,
   UserPlus,
 } from "lucide-react";
@@ -69,14 +68,6 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                     <Link to="/commissions" onClick={handleLinkClick}>
                         <DollarSign />
                         <span>Comisiones</span>
-                    </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="Invitaciones">
-                    <Link to="/invitations" onClick={handleLinkClick}>
-                        <Mail />
-                        <span>Invitaciones</span>
                     </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -163,14 +154,6 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         <Link to="/crm/prospects" onClick={handleLinkClick}>
                             <Users />
                             <span>Prospectos</span>
-                        </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton asChild tooltip="Invitaciones">
-                        <Link to="/crm/invitations" onClick={handleLinkClick}>
-                            <Mail />
-                            <span>Invitaciones</span>
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>

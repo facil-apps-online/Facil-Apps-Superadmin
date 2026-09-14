@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,14 +26,33 @@ import {
   useDeleteVendorProspect,
   useConvertVendorProspectToInvitation,
 } from '@/hooks/useVendorProspects';
+import {
+  INVITATION_STATUSES,
+  InvitationStatus,
+  VendorInvitation,
+  useVendorInvitations,
+  useUpdateVendorInvitationStatus,
+  useDeleteVendorInvitation,
+} from '@/hooks/useVendorInvitations';
 import { useToast } from '@/hooks/use-toast';
 import { CreateProspectDialog } from './CreateProspectDialog';
+import { CreateInvitationDialog } from './CreateInvitationDialog';
 import { ProspectVisitsDialog } from './ProspectVisitsDialog';
-import { Trash2, ArrowRightCircle, Clock } from 'lucide-react';
+import { Trash2, ArrowRightCircle, Clock, Copy } from 'lucide-react';
 
 const isOverdue = (isoDate: string) => new Date(isoDate) < new Date(new Date().toDateString());
 
-function ProspectCard({ prospect }: { prospect: VendorProspect }) {
+const STATUS_BADGE_VARIANT: Record<string, 'outline' | 'secondary' | 'destructive'> = {
+  convertido: 'outline',
+  activo: 'outline',
+  activo_con_plan: 'outline',
+  cuenta_creada: 'outline',
+  no_interesado: 'destructive',
+  perdido: 'destructive',
+  duplicado: 'destructive',
+};
+
+function ProspectRow({ prospect }: { prospect: VendorProspect }) {
   const { toast } = useToast();
   const deleteMutation = useDeleteVendorProspect();
   const convertMutation = useConvertVendorProspectToInvitation();
@@ -45,50 +64,48 @@ function ProspectCard({ prospect }: { prospect: VendorProspect }) {
       {
         onSuccess: (invitation) => {
           navigator.clipboard.writeText(invitation.invite_url).catch(() => {});
-          toast({ title: 'Convertido a invitación', description: 'Link copiado al portapapeles. Búscalo en Invitaciones.' });
+          toast({ title: 'Invitación enviada', description: 'Link copiado al portapapeles.' });
         },
         onError: (error) => toast({ title: 'Error', description: error.message, variant: 'destructive' }),
       }
     );
   };
 
+  const statusLabel = PROSPECT_STATUSES.find((s) => s.id === prospect.status)?.label || prospect.status;
+
   return (
-    <Card className="mb-3">
-      <CardContent className="p-3 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="font-medium truncate">{prospect.first_name} {prospect.last_name}</p>
-            {prospect.company_name && <p className="text-xs text-muted-foreground truncate">{prospect.company_name}</p>}
-          </div>
-          <Badge variant="outline" className="shrink-0">{prospect.platform_name}</Badge>
-        </div>
-        {(prospect.email || prospect.phone) && (
-          <p className="text-xs text-muted-foreground truncate">
-            {prospect.email} {prospect.phone && `· ${prospect.phone}`}
-          </p>
-        )}
-        {prospect.last_visit_at && (
-          <p className="text-xs text-muted-foreground">Última visita: {new Date(prospect.last_visit_at).toLocaleDateString('es-CO')}</p>
-        )}
-        {prospect.next_visit_at && (
+    <TableRow>
+      <TableCell>
+        <p className="font-medium">{prospect.first_name} {prospect.last_name}</p>
+        {prospect.company_name && <p className="text-xs text-muted-foreground">{prospect.company_name}</p>}
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {prospect.email}{prospect.email && prospect.phone && ' · '}{prospect.phone}
+      </TableCell>
+      <TableCell><Badge variant="outline">{prospect.platform_name}</Badge></TableCell>
+      <TableCell>
+        {prospect.next_visit_at ? (
           <Badge variant={isOverdue(prospect.next_visit_at) ? 'destructive' : 'secondary'} className="gap-1">
             <Clock className="h-3 w-3" />
-            Próxima visita: {new Date(prospect.next_visit_at).toLocaleDateString('es-CO')}
+            {new Date(prospect.next_visit_at).toLocaleDateString('es-CO')}
           </Badge>
+        ) : (
+          <span className="text-muted-foreground text-sm">—</span>
         )}
-        <div className="flex items-center gap-1">
-          <ProspectVisitsDialog prospect={prospect} />
-          <CreateProspectDialog prospect={prospect} />
-          {prospect.status !== 'convertido' && (
-            <Button size="sm" variant="ghost" onClick={handleConvert} disabled={convertMutation.isPending}>
-              <ArrowRightCircle className="mr-1 h-3.5 w-3.5" /> Invitar
-            </Button>
-          )}
-          <Button size="icon" variant="ghost" className="h-8 w-8 ml-auto" onClick={() => setConfirmDelete(true)}>
-            <Trash2 className="h-3.5 w-3.5 text-destructive" />
-          </Button>
-        </div>
-      </CardContent>
+      </TableCell>
+      <TableCell>
+        <Badge variant={STATUS_BADGE_VARIANT[prospect.status] || 'secondary'}>{statusLabel}</Badge>
+      </TableCell>
+      <TableCell className="text-right space-x-1 whitespace-nowrap">
+        <ProspectVisitsDialog prospect={prospect} />
+        <CreateProspectDialog prospect={prospect} />
+        <Button size="sm" variant="ghost" onClick={handleConvert} disabled={convertMutation.isPending}>
+          <ArrowRightCircle className="mr-1 h-3.5 w-3.5" /> Invitar
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setConfirmDelete(true)}>
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        </Button>
+      </TableCell>
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
@@ -102,7 +119,69 @@ function ProspectCard({ prospect }: { prospect: VendorProspect }) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </Card>
+    </TableRow>
+  );
+}
+
+function InvitationRow({ invitation }: { invitation: VendorInvitation }) {
+  const { toast } = useToast();
+  const updateStatus = useUpdateVendorInvitationStatus();
+  const deleteMutation = useDeleteVendorInvitation();
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(invitation.invite_url);
+    toast({ title: 'Copiado', description: 'Link copiado al portapapeles.' });
+  };
+
+  return (
+    <TableRow>
+      <TableCell>
+        <p className="font-medium">{invitation.prospect_first_name} {invitation.prospect_last_name}</p>
+        {invitation.company_name && <p className="text-xs text-muted-foreground">{invitation.company_name}</p>}
+      </TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {invitation.prospect_email}{invitation.prospect_email && invitation.prospect_phone && ' · '}{invitation.prospect_phone}
+      </TableCell>
+      <TableCell><Badge variant="outline">{invitation.platform_name}</Badge></TableCell>
+      <TableCell className="text-sm text-muted-foreground">
+        {invitation.trial_days_override ? `Trial: ${invitation.trial_days_override}d` : '—'}
+      </TableCell>
+      <TableCell>
+        <Select
+          value={invitation.status}
+          onValueChange={(status) => updateStatus.mutate({ invitationId: invitation.id, status: status as InvitationStatus })}
+        >
+          <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {INVITATION_STATUSES.map((s) => (
+              <SelectItem key={s.id} value={s.id}>{s.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </TableCell>
+      <TableCell className="text-right space-x-1 whitespace-nowrap">
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={handleCopy}>
+          <Copy className="h-3.5 w-3.5" />
+        </Button>
+        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setConfirmDelete(true)}>
+          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+        </Button>
+      </TableCell>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Eliminar invitación?</AlertDialogTitle>
+            <AlertDialogDescription>Esta acción no se puede deshacer.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(invitation.id)}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </TableRow>
   );
 }
 
@@ -125,30 +204,31 @@ export default function ProspectsPage() {
     return assignments.filter((a) => (a.platform_roles?.vendor?.length || 0) > 0);
   }, [assignments, isAdmin]);
 
-  const { data: prospects, isLoading } = useVendorProspects({
+  const scopedVendorUserId = isAdmin && vendorUserId !== 'all' ? vendorUserId : undefined;
+  const commonFilters = {
     platformId: platformId === 'all' ? undefined : platformId,
-    vendorUserId: isAdmin && vendorUserId !== 'all' ? vendorUserId : undefined,
+    vendorUserId: scopedVendorUserId,
     q: q || undefined,
-    dueOnly: dueOnly || undefined,
-  });
+  };
 
-  const grouped = useMemo(() => {
-    const map: Record<string, VendorProspect[]> = {};
-    for (const s of PROSPECT_STATUSES) map[s.id] = [];
-    for (const p of prospects || []) {
-      (map[p.status] ||= []).push(p);
-    }
-    return map;
-  }, [prospects]);
+  const { data: prospects, isLoading: loadingProspects } = useVendorProspects({ ...commonFilters, dueOnly: dueOnly || undefined });
+  const { data: invitations, isLoading: loadingInvitations } = useVendorInvitations(commonFilters, !dueOnly);
+
+  const openProspects = useMemo(() => (prospects || []).filter((p) => p.status !== 'convertido'), [prospects]);
+  const isLoading = loadingProspects || loadingInvitations;
+  const isEmpty = openProspects.length === 0 && (invitations || []).length === 0;
 
   return (
     <div className="w-full space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{isAdmin ? 'CRM Comercial — Prospectos' : 'Mis Prospectos'}</h1>
-          <p className="text-muted-foreground">Seguimiento comercial antes de enviar una invitación.</p>
+          <p className="text-muted-foreground">Desde captar el contacto hasta enviarle la invitación a la plataforma.</p>
         </div>
-        <CreateProspectDialog vendorUserId={isAdmin && vendorUserId !== 'all' ? vendorUserId : undefined} />
+        <div className="flex gap-2">
+          <CreateProspectDialog vendorUserId={scopedVendorUserId} />
+          <CreateInvitationDialog vendorUserId={scopedVendorUserId} />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-3">
@@ -179,38 +259,37 @@ export default function ProspectsPage() {
         </div>
       </div>
 
-      {isLoading && <p className="text-muted-foreground">Cargando prospectos...</p>}
+      {isLoading && <p className="text-muted-foreground">Cargando...</p>}
 
-      {dueOnly ? (
-        <div className="max-w-2xl space-y-3">
-          {(prospects || []).length === 0 && !isLoading && (
-            <p className="text-muted-foreground">No hay visitas pendientes para hoy. 🎉</p>
-          )}
-          {prospects?.map((p) => (
-            <ProspectCard key={p.id} prospect={p} />
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {PROSPECT_STATUSES.map((s) => (
-            <div key={s.id} className="w-72 shrink-0">
-              <Card>
-                <CardHeader className="p-3 pb-2">
-                  <CardTitle className="text-sm flex items-center justify-between">
-                    {s.label}
-                    <Badge variant="secondary">{grouped[s.id]?.length || 0}</Badge>
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <div className="mt-2">
-                {grouped[s.id]?.map((p) => (
-                  <ProspectCard key={p.id} prospect={p} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="w-full rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nombre</TableHead>
+              <TableHead>Contacto</TableHead>
+              <TableHead>Plataforma</TableHead>
+              <TableHead>Próx. visita / Trial</TableHead>
+              <TableHead>Estado</TableHead>
+              <TableHead className="text-right">Acciones</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {openProspects.map((p) => (
+              <ProspectRow key={`prospect-${p.id}`} prospect={p} />
+            ))}
+            {!dueOnly && (invitations || []).map((inv) => (
+              <InvitationRow key={`invitation-${inv.id}`} invitation={inv} />
+            ))}
+            {isEmpty && !isLoading && (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  {dueOnly ? 'No hay visitas pendientes para hoy. 🎉' : 'Aún no hay prospectos ni invitaciones.'}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

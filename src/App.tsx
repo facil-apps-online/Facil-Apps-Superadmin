@@ -32,7 +32,6 @@ import EditTenant from '@/pages/EditTenant';
 import TenantDetails from '@/pages/TenantDetails';
 import GlobalSettings from '@/pages/Settings/GlobalSettings';
 import VendorDashboard from '@/pages/VendorDashboard';
-import InvitationsPage from '@/pages/Vendor/InvitationsPage';
 import ProspectsPage from '@/pages/Vendor/ProspectsPage';
 import ConversionReportPage from '@/pages/Vendor/ConversionReportPage';
 import TeamPage from '@/pages/Vendor/TeamPage';
@@ -101,8 +100,9 @@ function App() {
                   <Route path="/global-settings" element={<GlobalSettings />} />
                   <Route path="/profile-settings" element={<ProfileSettings />} />
                   <Route path="/commissions" element={<VendorDashboard />} />
-                  <Route path="/invitations" element={<InvitationsPage />} />
-                  <Route path="/crm/invitations" element={<InvitationsPage />} />
+                  {/* Invitaciones se fusionó con Prospectos: mismo pipeline, una sola lista. */}
+                  <Route path="/invitations" element={<Navigate to="/prospects" replace />} />
+                  <Route path="/crm/invitations" element={<Navigate to="/crm/prospects" replace />} />
                   <Route path="/prospects" element={<ProspectsPage />} />
                   <Route path="/crm/prospects" element={<ProspectsPage />} />
                   <Route path="/conversion" element={<ConversionReportPage />} />
