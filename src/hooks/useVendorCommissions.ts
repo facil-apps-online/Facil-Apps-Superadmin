@@ -9,6 +9,8 @@ export interface Commission {
   saleAmount: number;
   commissionRate: number;
   commissionAmount: number;
+  isPaid: boolean;
+  paidAt: string | null;
 }
 
 const fetchVendorCommissions = async (userId: string): Promise<Commission[]> => {

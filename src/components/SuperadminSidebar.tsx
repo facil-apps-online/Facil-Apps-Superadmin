@@ -190,6 +190,16 @@ export function SuperadminSidebar({ ...props }: React.ComponentProps<typeof Side
                         </Link>
                         </SidebarMenuButton>
                     </SidebarMenuItem>
+                    {(role === 'super_admin' || role === 'app_super_admin') && (
+                    <SidebarMenuItem>
+                        <SidebarMenuButton asChild tooltip="Comisiones">
+                        <Link to="/crm/commissions" onClick={handleLinkClick}>
+                            <DollarSign />
+                            <span>Comisiones</span>
+                        </Link>
+                        </SidebarMenuButton>
+                    </SidebarMenuItem>
+                    )}
                     </SidebarMenu>
                 </SidebarGroup>
                 )}

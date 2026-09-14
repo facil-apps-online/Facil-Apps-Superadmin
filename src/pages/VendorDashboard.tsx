@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
 import { useVendorCommissions } from '@/hooks/useVendorCommissions';
 import { INVITATION_STATUSES, useVendorInvitationFunnel } from '@/hooks/useVendorInvitations';
 import { StatsCard } from '@/components/StatsCard';
@@ -72,6 +73,7 @@ export default function VendorDashboard() {
                   <TableHead>Monto Venta</TableHead>
                   <TableHead>Tasa Comisión</TableHead>
                   <TableHead>Monto Comisión</TableHead>
+                  <TableHead>Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -82,6 +84,13 @@ export default function VendorDashboard() {
                     <TableCell>{formatCurrency(commission.saleAmount)}</TableCell>
                     <TableCell>{commission.commissionRate}%</TableCell>
                     <TableCell>{formatCurrency(commission.commissionAmount)}</TableCell>
+                    <TableCell>
+                      {commission.isPaid ? (
+                        <Badge variant="outline">Pagada</Badge>
+                      ) : (
+                        <Badge variant="secondary">Pendiente</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

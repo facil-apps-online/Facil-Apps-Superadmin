@@ -36,6 +36,7 @@ import InvitationsPage from '@/pages/Vendor/InvitationsPage';
 import ProspectsPage from '@/pages/Vendor/ProspectsPage';
 import ConversionReportPage from '@/pages/Vendor/ConversionReportPage';
 import TeamPage from '@/pages/Vendor/TeamPage';
+import CommissionsAdminPage from '@/pages/Vendor/CommissionsAdminPage';
 import ProfileSettings from '@/pages/Settings/ProfileSettings';
 import AuthCallback from '@/pages/AuthCallback';
 import SetupSuperadmin from '@/pages/SetupSuperadmin';
@@ -107,6 +108,7 @@ function App() {
                   <Route path="/conversion" element={<ConversionReportPage />} />
                   <Route path="/crm/conversion" element={<ConversionReportPage />} />
                   <Route path="/crm/team" element={<TeamPage />} />
+                  <Route path="/crm/commissions" element={<CommissionsAdminPage />} />
                   {/* Aquí irían el resto de tus rutas protegidas */}
                 </Route>
               </Route>
